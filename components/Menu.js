@@ -10,128 +10,219 @@ export default function Menu({ routes }) {
     setIsMenuOpen(!isMenuOpen);
   };
 
+  // Todas las pantallas de la app (de forma interna)
+  const todasLasRutas = [
+    { screen: 'HomeScreen', label: 'Inicio' },
+    { screen: 'LoginScreen', label: 'Iniciar sesión' },
+    { screen: 'SignUpScreen', label: 'Registrarse' },
+    { screen: 'GalleryScreen', label: 'Galería' },
+    { screen: 'ProfileScreen', label: 'Perfil' },
+    { screen: 'UploadPhotoScreen', label: 'Subir Foto' },
+    { screen: 'RankingScreen', label: 'Ranking' },
+    { screen: 'EditProfileScreen', label: 'Editar perfil' },
+  ];
+
+  // Filtramos las rutas que el usuario desea mostrar
+  const rutasFiltradas = todasLasRutas.filter(r => routes.includes(r.screen));
+
   return (
-    <View style={styles.menuContainer}>
-      <TouchableOpacity style={styles.menuToggleButton} onPress={toggleMenu}>
-        <View style={styles.toggleContainer}>
+    <>
+      {/* Header principal */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.menuButton} onPress={toggleMenu}>
+          <Text style={{ color: '#fff', fontSize: 35 }}>≡</Text>
+        </TouchableOpacity>
+
+        <View style={styles.titleContainer}>
           <Text style={styles.appName}>PhotoRally</Text>
-          {!isMenuOpen && (
-            <View style={styles.hamburger}>
-              <View style={styles.hamburgerLine} />
-              <View style={styles.hamburgerLine} />
-              <View style={styles.hamburgerLine} />
-            </View>
-          )}
         </View>
-      </TouchableOpacity>
+      </View>
+
+      {/* Overlay oscuro */}
       {isMenuOpen && (
-        <View style={styles.menu}>
-          {routes.map((route, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.menuButton}
-              onPress={() => {
-                navigation.navigate(route);
-                setIsMenuOpen(false);
-              }}
-            >
-              <Text style={styles.menuText}>{route}</Text>
-            </TouchableOpacity>
-          ))}
-          <TouchableOpacity style={styles.closeButton} onPress={toggleMenu}>
-            <View style={styles.arrowDown}>
-              <View style={styles.arrowLineLeft} />
-              <View style={styles.arrowLineRight} />
+        <TouchableOpacity
+          style={styles.overlay}
+          activeOpacity={1}
+          onPress={toggleMenu}
+        />
+      )}
+
+      {/* Menú lateral */}
+      {isMenuOpen && (
+        <View style={styles.sideMenu}>
+          <View style={styles.menuHeader}>
+            <View style={styles.userSection}>
+              <View style={styles.avatarPlaceholder}>
+                <Text style={{ color: '#fff', fontSize: 18 }}>U</Text>
+              </View>
+              <View style={styles.userInfo}>
+                <Text style={styles.userName}>Usuario Demo</Text>
+                <Text style={styles.userRole}>Participante</Text>
+              </View>
             </View>
-          </TouchableOpacity>
+
+            <TouchableOpacity style={styles.closeMenuButton} onPress={toggleMenu}>
+              <Text style={{ color: '#fff', fontSize: 18 }}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Ítems del menú */}
+          <View style={styles.menuItems}>
+            {rutasFiltradas.map((ruta, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.menuItem}
+                onPress={() => {
+                  navigation.navigate(ruta.screen.replace('Screen', ''));
+                  toggleMenu();
+                }}
+              >
+                <Text style={styles.menuItemText}>{ruta.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Footer */}
+          <View style={styles.menuFooter}>
+            <TouchableOpacity style={styles.footerItem}>
+              <Text style={[styles.footerText, { color: '#E74C3C' }]}>Cerrar Sesión</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
-    </View>
+    </>
   );
 }
-
 const styles = StyleSheet.create({
-  menuContainer: {
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#1a1a1a',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    paddingTop: 20, // Account for status bar
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  menuButton: {
+    padding: 8,
+  },
+  titleContainer: {
+    flex: 0,
+    alignItems: 'center',
+  },
+  appName: {
+    fontSize: 20,
+    color: '#fff',
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  overlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    zIndex: 1,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 998,
   },
-  menuToggleButton: {
-    backgroundColor: '#5459AC',
-    paddingVertical: 25,
+  sideMenu: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: 280,
+    backgroundColor: '#0F0F23',
+    zIndex: 999,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 2,
+      height: 0,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  menuHeader: {
+    backgroundColor: '#1a1a1a',
+    paddingTop: 50,
     paddingHorizontal: 20,
-    marginTop: 40, // Account for status bar
-  },
-  toggleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  appName: {
-    fontSize: 25,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  hamburger: {
-    width: 30,
-    height: 22,
-    justifyContent: 'space-between',
-  },
-  hamburgerLine: {
-    width: '100%',
-    height: 3,
-    backgroundColor: '#fff',
-    borderRadius: 2,
-  },
-  menu: {
-    backgroundColor: '#5459AC',
-    flexDirection: 'column',
-    alignItems: 'center',
-    paddingVertical: 10,
+    paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#fff',
+    borderBottomColor: '#333',
   },
-  menuButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    width: '100%',
+  userSection: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 15,
   },
-  menuText: {
-    fontSize: 20,
+  avatarPlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#6C7CE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 15,
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: 2,
+  },
+  userRole: {
+    fontSize: 12,
+    color: '#A0A0A0',
+  },
+  closeMenuButton: {
+    position: 'absolute',
+    top: 55,
+    right: 20,
+    padding: 5,
+  },
+  menuItems: {
+    flex: 1,
+    paddingTop: 20,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  menuItemIcon: {
+    width: 35,
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  menuItemText: {
+    flex: 1,
+    fontSize: 16,
     color: '#fff',
     fontWeight: '500',
   },
-  closeButton: {
-    paddingVertical: 12,
+  menuFooter: {
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+    paddingVertical: 20,
+  },
+  footerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 20,
-    width: '100%',
-    alignItems: 'center',
+    paddingVertical: 12,
   },
-  arrowDown: {
-    width: 25,
-    height: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  arrowLineLeft: {
-    position: 'absolute',
-    width: 14,
-    height: 3,
-    backgroundColor: '#fff',
-    borderRadius: 2,
-    transform: [{ rotate: '-45deg' }],
-    left: 2,
-  },
-  arrowLineRight: {
-    position: 'absolute',
-    width: 14,
-    height: 3,
-    backgroundColor: '#fff',
-    borderRadius: 2,
-    transform: [{ rotate: '45deg' }],
-    right: 2,
+  footerText: {
+    fontSize: 14,
+    color: '#A0A0A0',
+    marginLeft: 15,
+    fontWeight: '500',
   },
 });
