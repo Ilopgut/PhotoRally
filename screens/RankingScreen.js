@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,62 +7,84 @@ import {
   Image,
   SafeAreaView,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { collection, getFirestore, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import Menu from '../components/Menu';
 
-const rankingData = [
-  {
-    uid: '1',
-    name: 'María González',
-    photo: 'https://via.placeholder.com/50',
-    photos_submitted: 12,
-    votes_given: 45,
-  },
-  {
-    uid: '2',
-    name: 'Carlos Pérez',
-    photo: 'https://via.placeholder.com/50',
-    photos_submitted: 10,
-    votes_given: 40,
-  },
-  // Agrega más usuarios según sea necesario
-];
-
 export default function RankingScreen({ navigation }) {
+  const [rankingData, setRankingData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const routes = ['LoginScreen',
-  'SignUpScreen',
-  'GalleryScreen',
-  'ProfileScreen',
-  'UploadPhotoScreen',
-  'HomeScreen',
-  'EditProfileScreen'];
+  const routes = [
+    'LoginScreen',
+    'SignUpScreen',
+    'GalleryScreen',
+    'ProfileScreen',
+    'UploadPhotoScreen',
+    'HomeScreen',
+    'EditProfileScreen',
+  ];
+
+  useEffect(() => {
+    const fetchRanking = async () => {
+      try {
+        const db = getFirestore();
+        const photosRef = collection(db, 'photos');
+        const q = query(photosRef, orderBy('vote_count', 'desc'), limit(10));
+        const snapshot = await getDocs(q);
+
+        const topPhotos = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        setRankingData(topPhotos);
+      } catch (error) {
+        console.error('Error fetching ranking data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRanking();
+  }, []);
 
   const renderItem = ({ item, index }) => (
     <View style={styles.itemContainer}>
       <Text style={styles.rank}>{index + 1}</Text>
-      <Image source={{ uri: item.photo }} style={styles.avatar} />
+      <Image source={{ uri: item.image_url }} style={styles.avatar} />
       <View style={styles.userInfo}>
-        <Text style={styles.name}>{item.name}</Text>
+        <Text style={styles.name}>{item.user_name}</Text>
         <Text style={styles.stats}>
-          Fotos: {item.photos_submitted} | Votos: {item.votes_given}
+          Foto: "{item.title}" | Votos: {item.vote_count}
         </Text>
       </View>
+    </View>
+  );
+
+  const renderEmptyComponent = () => (
+    <View style={styles.emptyContainer}>
+      <Text style={styles.emptyText}>Aún no hay fotos en el concurso. ¡Sé el primero en participar!</Text>
     </View>
   );
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1a1a1a" />
+      <Menu routes={routes} />
 
-      <Menu routes={routes}/>
-      <FlatList
-        data={rankingData}
-        keyExtractor={(item) => item.uid}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color="#6C7CE7" style={{ marginTop: 20 }} />
+      ) : (
+        <FlatList
+          data={rankingData}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          ListEmptyComponent={renderEmptyComponent}
+          contentContainerStyle={styles.listContent}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -72,18 +94,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0F0F23',
   },
-  header: {
-    padding: 20,
-    backgroundColor: '#1a1a1a',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
-  },
   listContent: {
     padding: 20,
+    flexGrow: 1,
   },
   itemContainer: {
     flexDirection: 'row',
@@ -117,5 +130,16 @@ const styles = StyleSheet.create({
   stats: {
     fontSize: 12,
     color: '#A0A0A0',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 30,
+  },
+  emptyText: {
+    color: '#aaa',
+    fontSize: 16,
+    textAlign: 'center',
   },
 });

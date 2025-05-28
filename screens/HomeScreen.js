@@ -47,11 +47,6 @@ export default function HomeScreen() {
       totalPhotos: 234, // Esto vendrá de Firebase en el futuro
       participants: 89   // Esto vendrá de Firebase en el futuro
     },
-    userStats: {
-      photosSubmitted: 2, // Limitado por max_photos_per_user
-      votesGiven: 4,      // Limitado por max_votes_per_user
-      ranking: 7
-    },
     recentPhotos: [
       { id: 1, url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400", votes: 23, title: "Atardecer en la montaña" },
       { id: 2, url: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400", votes: 18, title: "Bosque misterioso" },
