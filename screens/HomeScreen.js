@@ -74,7 +74,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" backgroundColor="#1a1a1a" />
+      <StatusBar style="light"/>
       <Menu routes={routes} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>

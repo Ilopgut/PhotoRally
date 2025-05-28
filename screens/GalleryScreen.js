@@ -43,7 +43,6 @@ export default function GalleryScreen() {
     <SafeAreaView style={styles.container}>
       <Menu routes={routes}/>
       <View style={{ height: Platform.OS === 'android' ? StatusBar.currentHeight : 0, backgroundColor: '#0F0F23' }} />
-      <StatusBar barStyle="light-content" />
       <FlatList
         data={images}
         keyExtractor={(item) => item.id}

@@ -1,17 +1,55 @@
 import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
+import { FIREBASE_AUTH, FIRESTORE_DB } from '../FirebaseConfig';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import Menu from '../components/Menu';
 
-export default function SignUpScreen() {
+export default function SignUpScreen({navigation}) {
   const routes = ['HomeScreen', 'LoginScreen', 'GalleryScreen', 'ProfileScreen', 'UploadPhotoScreen', 'RankingScreen'];
+
+  const [registrationError,setRegistrationError] = useState('');
 
   const SignUpSchema = Yup.object().shape({
     username: Yup.string().required('Usuario requerido'),
     email: Yup.string().email('Email inválido').required('Email requerido'),
     password: Yup.string().min(6, 'Mínimo 6 caracteres').required('Contraseña requerida'),
   });
+
+  const handleSignUp = async (values, { setSubmitting }) => {
+    try {
+      // 1. Crear usuario en Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(FIREBASE_AUTH, values.email, values.password);
+      const user = userCredential.user;
+
+      // 2. Actualizar el displayName en Auth (opcional)
+      await updateProfile(user, { displayName: values.username });
+
+      // 3. Crear documento usuario en Firestore
+      // La UID es la que Firebase asigna automáticamente en user.uid
+      const userDocRef = doc(FIRESTORE_DB, 'users', user.uid);
+      await setDoc(userDocRef, {
+        uid: user.uid,
+        email: values.email,
+        name: values.username,
+        photos_submitted: 0,
+        votes_given: 0,
+        role: 'participant',
+        is_active: true,
+      });
+
+      Alert.alert('Registro exitoso', 'Bienvenido, ' + values.username);
+      // Aquí podrías navegar a la pantalla principal o login, según tu flujo
+      navigation.navigate('Home');
+    } catch (error) {
+      setRegistrationError(error.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -24,11 +62,9 @@ export default function SignUpScreen() {
           <Formik
             initialValues={{ username: '', email: '', password: '' }}
             validationSchema={SignUpSchema}
-            onSubmit={(values) => {
-              console.log(values);
-            }}
+            onSubmit={handleSignUp}
           >
-            {({ handleChange, handleBlur, handleSubmit, values, errors, touched }) => (
+            {({ handleChange, handleBlur, handleSubmit, values, errors, touched, isSubmitting }) => (
               <View style={styles.form}>
                 <TextInput
                   placeholder="Usuario"
@@ -37,6 +73,7 @@ export default function SignUpScreen() {
                   onChangeText={handleChange('username')}
                   onBlur={handleBlur('username')}
                   value={values.username}
+                  editable={!isSubmitting}
                 />
                 {errors.username && touched.username && <Text style={styles.error}>{errors.username}</Text>}
 
@@ -49,6 +86,7 @@ export default function SignUpScreen() {
                   value={values.email}
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  editable={!isSubmitting}
                 />
                 {errors.email && touched.email && <Text style={styles.error}>{errors.email}</Text>}
 
@@ -60,11 +98,13 @@ export default function SignUpScreen() {
                   onBlur={handleBlur('password')}
                   value={values.password}
                   secureTextEntry
+                  editable={!isSubmitting}
                 />
                 {errors.password && touched.password && <Text style={styles.error}>{errors.password}</Text>}
 
-                <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-                  <Text style={styles.buttonText}>Registrarse</Text>
+                {registrationError && <Text style={styles.error}>Error al registrarse: {registrationError}</Text>}
+                <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={isSubmitting}>
+                  <Text style={styles.buttonText}>{isSubmitting ? 'Registrando...' : 'Registrarse'}</Text>
                 </TouchableOpacity>
               </View>
             )}

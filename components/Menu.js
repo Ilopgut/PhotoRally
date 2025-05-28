@@ -1,16 +1,36 @@
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { FIREBASE_AUTH } from '../FirebaseConfig';
 
 export default function Menu({ routes }) {
   const navigation = useNavigation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [user, setUser] = useState(null);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
 
-  // Todas las pantallas de la app (de forma interna)
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(FIREBASE_AUTH, (authUser) => {
+      setUser(authUser);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(FIREBASE_AUTH);
+      toggleMenu();
+      navigation.replace('Login'); // Asegúrate de que 'Login' está definido en el stack navigator
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error.message);
+    }
+  };
+
   const todasLasRutas = [
     { screen: 'HomeScreen', label: 'Inicio' },
     { screen: 'LoginScreen', label: 'Iniciar sesión' },
@@ -22,23 +42,19 @@ export default function Menu({ routes }) {
     { screen: 'EditProfileScreen', label: 'Editar perfil' },
   ];
 
-  // Filtramos las rutas que el usuario desea mostrar
   const rutasFiltradas = todasLasRutas.filter(r => routes.includes(r.screen));
 
   return (
     <>
-      {/* Header principal */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.menuButton} onPress={toggleMenu}>
           <Text style={{ color: '#fff', fontSize: 35 }}>≡</Text>
         </TouchableOpacity>
-
         <View style={styles.titleContainer}>
           <Text style={styles.appName}>PhotoRally</Text>
         </View>
       </View>
 
-      {/* Overlay oscuro */}
       {isMenuOpen && (
         <TouchableOpacity
           style={styles.overlay}
@@ -47,17 +63,18 @@ export default function Menu({ routes }) {
         />
       )}
 
-      {/* Menú lateral */}
       {isMenuOpen && (
         <View style={styles.sideMenu}>
           <View style={styles.menuHeader}>
             <View style={styles.userSection}>
               <View style={styles.avatarPlaceholder}>
-                <Text style={{ color: '#fff', fontSize: 18 }}>U</Text>
+                <Text style={{ color: '#fff', fontSize: 18 }}>
+                  {user?.email?.charAt(0)?.toUpperCase() || 'I'}
+                </Text>
               </View>
+
               <View style={styles.userInfo}>
-                <Text style={styles.userName}>Usuario Demo</Text>
-                <Text style={styles.userRole}>Participante</Text>
+                <Text style={styles.userName}>{user?.displayName || user?.email || 'Invitado'}</Text>
               </View>
             </View>
 
@@ -66,7 +83,6 @@ export default function Menu({ routes }) {
             </TouchableOpacity>
           </View>
 
-          {/* Ítems del menú */}
           <View style={styles.menuItems}>
             {rutasFiltradas.map((ruta, index) => (
               <TouchableOpacity
@@ -82,9 +98,8 @@ export default function Menu({ routes }) {
             ))}
           </View>
 
-          {/* Footer */}
           <View style={styles.menuFooter}>
-            <TouchableOpacity style={styles.footerItem}>
+            <TouchableOpacity style={styles.footerItem} onPress={handleSignOut}>
               <Text style={[styles.footerText, { color: '#E74C3C' }]}>Cerrar Sesión</Text>
             </TouchableOpacity>
           </View>
@@ -93,6 +108,9 @@ export default function Menu({ routes }) {
     </>
   );
 }
+
+// (mantén aquí tu objeto `styles` igual que en tu código original)
+
 const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
@@ -101,7 +119,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    paddingTop: 20, // Account for status bar
+    paddingTop: 10, // Account for status bar
     borderBottomWidth: 1,
     borderBottomColor: '#333',
   },

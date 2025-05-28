@@ -1,7 +1,13 @@
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View, Text, TextInput, TouchableOpacity,
+  StyleSheet, KeyboardAvoidingView, Platform, ScrollView
+} from 'react-native';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useNavigation } from '@react-navigation/native';
+import { FIREBASE_AUTH } from '../FirebaseConfig';
 import Menu from '../components/Menu';
 
 const loginValidationSchema = Yup.object().shape({
@@ -10,30 +16,55 @@ const loginValidationSchema = Yup.object().shape({
 });
 
 export default function LoginScreen() {
+  const navigation = useNavigation();
+  const [authError, setAuthError] = useState('');
 
   const routes = [
-  'SignUpScreen',
-  'GalleryScreen',
-  'ProfileScreen',
-  'UploadPhotoScreen',
-  'RankingScreen'];
+    'HomeScreen',
+    'SignUpScreen',
+    'GalleryScreen',
+    'ProfileScreen',
+    'UploadPhotoScreen',
+    'RankingScreen'
+  ];
+
+  const handleLogin = async (values, { setSubmitting }) => {
+    setAuthError('');
+    try {
+      await signInWithEmailAndPassword(FIREBASE_AUTH, values.email, values.password);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Home' }],
+      });
+    } catch (error) {
+      const message = error.code === 'auth/invalid-credential'
+        ? 'Usuario no encontrado'
+        : error.code === 'auth/wrong-password'
+        ? 'Contraseña incorrecta'
+        : 'Error al iniciar sesión';
+      setAuthError(message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
       <Menu routes={routes} />
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.body}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.body}
+      >
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <Text style={styles.title}>Iniciar Sesión</Text>
 
           <Formik
             initialValues={{ email: '', password: '' }}
             validationSchema={loginValidationSchema}
-            onSubmit={(values) => {
-              console.log(values);
-            }}
+            onSubmit={handleLogin}
           >
-            {({ handleChange, handleBlur, handleSubmit, values, errors, touched }) => (
+            {({ handleChange, handleBlur, handleSubmit, values, errors, touched, isSubmitting }) => (
               <View style={styles.form}>
                 <TextInput
                   placeholder="Correo electrónico"
@@ -58,8 +89,16 @@ export default function LoginScreen() {
                 />
                 {touched.password && errors.password && <Text style={styles.error}>{errors.password}</Text>}
 
-                <TouchableOpacity onPress={handleSubmit} style={styles.button}>
-                  <Text style={styles.buttonText}>Entrar</Text>
+                {authError !== '' && <Text style={styles.authError}>{authError}</Text>}
+
+                <TouchableOpacity
+                  onPress={handleSubmit}
+                  style={[styles.button, isSubmitting && { backgroundColor: '#aaa' }]}
+                  disabled={isSubmitting}
+                >
+                  <Text style={styles.buttonText}>
+                    {isSubmitting ? 'Entrando...' : 'Entrar'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -110,12 +149,18 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     fontSize: 16,
     backgroundColor: '#1a1a1a',
-    color: '#333',
+    color: '#fff',
   },
   error: {
     color: '#E63946',
     fontSize: 12,
     marginBottom: 8,
+  },
+  authError: {
+    color: '#E63946',
+    fontSize: 14,
+    marginBottom: 10,
+    textAlign: 'center',
   },
   button: {
     backgroundColor: '#5459AC',

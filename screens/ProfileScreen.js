@@ -1,9 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  Image,
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
@@ -11,25 +10,56 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { getAuth } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { FIRESTORE_DB } from '../FirebaseConfig'; // Asegúrate de tener esto configurado
 
-export default function ProfileScreen({navigation}) {
-
-  // Datos de ejemplo con imagen de perfil
-  const userData = {
-    email: "usuarioEjemplo@gmail.com",
-    is_active: true,
-    name: "María González",
-    photos_submitted: 12,
-    role: "participant",
-    uid: "UIDEjemplo123",
-    votes_given: 45,
-    profile_picture: "https://i.pravatar.cc/150?img=47", // Ejemplo de imagen
-  };
+export default function ProfileScreen() {
+  const navigation = useNavigation();
+  const auth = getAuth();
+  const [userData, setUserData] = useState(null);
 
   const getStatusColor = (isActive) => isActive ? '#4CAF50' : '#F44336';
   const getStatusText = (isActive) => isActive ? 'Activo' : 'Inactivo';
   const getRoleColor = (role) => role === 'admin' ? '#FF5722' : '#2196F3';
   const getRoleText = (role) => role === 'admin' ? 'Administrador' : 'Participante';
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const user = auth.currentUser;
+      if (user) {
+        const userDocRef = doc(FIRESTORE_DB, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          setUserData({
+            uid: user.uid,
+            email: user.email,
+            name: user.displayName || userDoc.data().name || "Nombre no disponible",
+            is_active: userDoc.data().is_active ?? true,
+            role: userDoc.data().role || 'participant',
+            photos_submitted: userDoc.data().photos_submitted || 0,
+            votes_given: userDoc.data().votes_given || 0,
+          });
+        }
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  if (!userData) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#1a1a1a" />
+        <View style={styles.loadingContainer}>
+          <Text style={{ color: '#fff' }}>Cargando perfil...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const getInitial = (name) => name ? name.charAt(0).toUpperCase() : '?';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -46,16 +76,9 @@ export default function ProfileScreen({navigation}) {
         {/* Perfil */}
         <View style={styles.profileSection}>
           <View style={styles.imageContainer}>
-            {userData.profile_picture ? (
-              <Image
-                source={{ uri: userData.profile_picture }}
-                style={styles.profileImage}
-              />
-            ) : (
-              <View style={styles.profileImagePlaceholder}>
-                <Ionicons name="person" size={60} color="#fff" />
-              </View>
-            )}
+            <View style={styles.profileImagePlaceholder}>
+              <Text style={styles.profileInitial}>{getInitial(userData.name)}</Text>
+            </View>
             <View style={[styles.statusBadge, { backgroundColor: getStatusColor(userData.is_active) }]}>
               <Ionicons
                 name={userData.is_active ? "checkmark-circle" : "close-circle"}
@@ -137,26 +160,6 @@ export default function ProfileScreen({navigation}) {
             </View>
           </View>
         </View>
-
-        {/* Actividad */}
-        <View style={styles.activitySection}>
-          <Text style={styles.sectionTitle}>Actividad</Text>
-
-          <View style={styles.activityGrid}>
-            <View style={styles.activityCard}>
-              <Ionicons name="camera" size={24} color="#6C7CE7" />
-              <Text style={styles.activityNumber}>{userData.photos_submitted}</Text>
-              <Text style={styles.activityLabel}>Fotos Subidas</Text>
-            </View>
-
-            <View style={styles.activityCard}>
-              <Ionicons name="heart" size={24} color="#E74C3C" />
-              <Text style={styles.activityNumber}>{userData.votes_given}</Text>
-              <Text style={styles.activityLabel}>Votos Emitidos</Text>
-            </View>
-          </View>
-        </View>
-
         {/* Botón de acción */}
         <View style={styles.actionButtons}>
           <TouchableOpacity style={styles.primaryButton}>
@@ -385,4 +388,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
   },
+  profileImagePlaceholder: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      backgroundColor: '#6C7CE7',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    profileInitial: {
+      fontSize: 36,
+      color: '#fff',
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 });
