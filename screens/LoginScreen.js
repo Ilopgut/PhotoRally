@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, fetchSignInMethodsForEmail } from 'firebase/auth';
 import { useNavigation } from '@react-navigation/native';
 import { FIREBASE_AUTH } from '../FirebaseConfig';
 import Menu from '../components/Menu';
@@ -30,23 +30,23 @@ export default function LoginScreen() {
 
   const handleLogin = async (values, { setSubmitting }) => {
     setAuthError('');
+    const email = values.email.trim();
+
     try {
-      await signInWithEmailAndPassword(FIREBASE_AUTH, values.email, values.password);
+      await signInWithEmailAndPassword(FIREBASE_AUTH, email, values.password);
       navigation.reset({
         index: 0,
         routes: [{ name: 'Home' }],
       });
     } catch (error) {
-      const message = error.code === 'auth/invalid-credential'
-        ? 'Usuario no encontrado'
-        : error.code === 'auth/wrong-password'
-        ? 'Contraseña incorrecta'
-        : 'Error al iniciar sesión';
-      setAuthError(message);
+      setAuthError('Correo o contraseña incorrectos');
     } finally {
       setSubmitting(false);
     }
   };
+
+
+
 
   return (
     <View style={styles.container}>

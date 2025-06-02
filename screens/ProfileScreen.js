@@ -70,6 +70,9 @@ export default function ProfileScreen() {
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('Home')}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
+        <TouchableOpacity style={styles.editButton} onPress={() => navigation.navigate('EditProfile')}>
+          <Ionicons name="create-outline" size={24} color="#fff" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -165,6 +168,14 @@ export default function ProfileScreen() {
           <TouchableOpacity style={styles.primaryButton}>
             <Ionicons name="camera-outline" size={20} color="#fff" />
             <Text style={styles.primaryButtonText}>Subir Foto</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={() => navigation.navigate('EditProfileScreen')}
+          >
+            <Ionicons name="create-outline" size={20} color="#6C7CE7" />
+            <Text style={styles.secondaryButtonText}>Editar Perfil</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -388,21 +399,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
   },
-  profileImagePlaceholder: {
-      width: 100,
-      height: 100,
-      borderRadius: 50,
-      backgroundColor: '#6C7CE7',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    profileInitial: {
-      fontSize: 36,
-      color: '#fff',
-    },
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
+  profileInitial: {
+    fontSize: 36,
+    color: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
