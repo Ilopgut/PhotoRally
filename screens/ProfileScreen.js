@@ -135,7 +135,6 @@ export default function ProfileScreen() {
               <Text style={styles.infoValue}>{userData.uid}</Text>
             </View>
           </View>
-
           <View style={styles.infoItem}>
             <View style={styles.infoIcon}>
               <Ionicons name="shield-outline" size={20} color="#6C7CE7" />
@@ -146,9 +145,8 @@ export default function ProfileScreen() {
             </View>
           </View>
         </View>
-        {/* Botón de acción */}
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.primaryButton}>
+          <TouchableOpacity style={styles.primaryButton} onPress={()=>{navigation.navigate("UploadPhoto")}}>
             <Ionicons name="camera-outline" size={20} color="#fff" />
             <Text style={styles.primaryButtonText}>Subir Foto</Text>
           </TouchableOpacity>

@@ -2,21 +2,35 @@ import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { FIREBASE_AUTH, FIRESTORE_DB } from '../FirebaseConfig';
 
 export default function Menu({ routes }) {
   const navigation = useNavigation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [user, setUser] = useState(null);
+  const [authUser, setAuthUser] = useState(null);
+  const [userData, setUserData] = useState(null);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(FIREBASE_AUTH, (authUser) => {
-      setUser(authUser);
+    const unsubscribe = onAuthStateChanged(FIREBASE_AUTH, async (user) => {
+      setAuthUser(user);
+
+      if (user) {
+        const userDocRef = doc(FIRESTORE_DB, 'users', user.uid);
+        const userSnap = await getDoc(userDocRef);
+
+        if (userSnap.exists()) {
+          setUserData(userSnap.data());
+        } else {
+          setUserData(null);
+        }
+      } else {
+        setUserData(null);
+      }
     });
 
     return () => unsubscribe();
@@ -24,8 +38,8 @@ export default function Menu({ routes }) {
 
   const handleSignOut = async () => {
     try {
-      if (user) {
-        const userRef = doc(FIRESTORE_DB, 'users', user.uid);
+      if (authUser) {
+        const userRef = doc(FIRESTORE_DB, 'users', authUser.uid);
         await updateDoc(userRef, { is_active: false });
       }
 
@@ -37,19 +51,37 @@ export default function Menu({ routes }) {
     }
   };
 
-  const todasLasRutas = [
-    { screen: 'HomeScreen', label: 'Inicio' },
-    { screen: 'LoginScreen', label: 'Iniciar sesión' },
-    { screen: 'SignUpScreen', label: 'Registrarse' },
-    { screen: 'GalleryScreen', label: 'Galería' },
-    { screen: 'ProfileScreen', label: 'Perfil' },
-    { screen: 'UploadPhotoScreen', label: 'Subir Foto' },
-    { screen: 'RankingScreen', label: 'Ranking' },
-    { screen: 'EditProfileScreen', label: 'Editar perfil' },
-    { screen: 'UserDashboardScreen', label: 'Panel de usuario' },
-  ];
+  // Todas las rutas disponibles
+    const todasLasRutas = [
+      { screen: 'HomeScreen', label: 'Inicio', public: true },
+      { screen: 'LoginScreen', label: 'Iniciar sesión', onlyIfLoggedOut: true },
+      { screen: 'SignUpScreen', label: 'Registrarse', onlyIfLoggedOut: true },
+      { screen: 'GalleryScreen', label: 'Galería', public: true },
+      { screen: 'ProfileScreen', label: 'Perfil' },
+      { screen: 'UploadPhotoScreen', label: 'Subir Foto' },
+      { screen: 'RankingScreen', label: 'Ranking', public: true },
+      { screen: 'EditProfileScreen', label: 'Editar perfil' },
+      { screen: 'UserDashboardScreen', label: 'Panel de usuario', adminOnly: true },
+    ];
 
-  const rutasFiltradas = todasLasRutas.filter(r => routes.includes(r.screen));
+    // Filtrado según sesión y rol
+    const rutasFiltradas = todasLasRutas.filter((ruta) => {
+      if (!authUser) {
+        // Si no hay sesión, mostrar rutas públicas o de solo sesión cerrada
+        return ruta.public || ruta.onlyIfLoggedOut;
+      }
+
+      // Si está logueado y la ruta es solo para no autenticados, no mostrarla
+      if (ruta.onlyIfLoggedOut) return false;
+
+      // Si es ruta solo para admin, verificar el rol
+      if (ruta.adminOnly) {
+        return userData?.role === 'administrator';
+      }
+
+      // Mostrar rutas que el usuario tiene acceso (por lista `routes`)
+      return routes.includes(ruta.screen);
+    });
 
   return (
     <>
@@ -76,12 +108,14 @@ export default function Menu({ routes }) {
             <View style={styles.userSection}>
               <View style={styles.avatarPlaceholder}>
                 <Text style={{ color: '#fff', fontSize: 18 }}>
-                  {user?.email?.charAt(0)?.toUpperCase() || 'I'}
+                  {authUser?.email?.charAt(0)?.toUpperCase() || 'I'}
                 </Text>
               </View>
 
               <View style={styles.userInfo}>
-                <Text style={styles.userName}>{user?.displayName || 'Invitado'}</Text>
+                <Text style={styles.userName}>
+                  {authUser?.displayName || 'Invitado'}
+                </Text>
               </View>
             </View>
 
@@ -105,14 +139,13 @@ export default function Menu({ routes }) {
             ))}
           </View>
 
-          {user &&
-              <View style={styles.menuFooter}>
-                <TouchableOpacity style={styles.footerItem} onPress={handleSignOut}>
-                  <Text style={[styles.footerText, { color: '#E74C3C' }]}>Cerrar Sesión</Text>
-                </TouchableOpacity>
-              </View>
-          }
-
+          {authUser && (
+            <View style={styles.menuFooter}>
+              <TouchableOpacity style={styles.footerItem} onPress={handleSignOut}>
+                <Text style={[styles.footerText, { color: '#E74C3C' }]}>Cerrar Sesión</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       )}
     </>
