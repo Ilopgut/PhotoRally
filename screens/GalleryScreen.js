@@ -1,4 +1,5 @@
 import React from 'react';
+import { useState,useEffect } from 'react';
 import {
   Text,
   View,
@@ -14,6 +15,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Menu from '../components/Menu';
 
+import { getAuth } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { FIRESTORE_DB } from '../FirebaseConfig';
+
 const images = [
   { id: '1', uri: 'https://picsum.photos/200/300?random=1' },
   { id: '2', uri: 'https://picsum.photos/200/300?random=2' },
@@ -27,6 +32,26 @@ const screenWidth = Dimensions.get('window').width;
 const imageSize = screenWidth / numColumns - 10;
 
 export default function GalleryScreen({navigation}) {
+
+  const auth = getAuth();
+  const [userRole, setUserRole] = useState(null);
+
+  //recogemos el rol del usuario de la consulta del usuario autenticado
+  useEffect(()=>{
+    const fetchUserRole = async () => {
+        const user = auth.currentUser;
+        if(user){
+            const userDocRef = doc(FIRESTORE_DB, 'users', user.uid);
+            const userDoc = await getDoc(userDocRef);
+
+            if(userDoc){
+                setUserRole(userDoc.data().role);
+            }
+        }
+    };
+
+    fetchUserRole();
+  },[]);
 
   const routes = ['LoginScreen',
   'SignUpScreen',
@@ -54,12 +79,14 @@ export default function GalleryScreen({navigation}) {
       />
 
 
+        {userRole==='participant' &&
         <View style={styles.actionButtons}>
           <TouchableOpacity style={styles.primaryButton} onPress={()=>{navigation.navigate("UploadPhoto")}}>
             <Ionicons name="camera-outline" size={20} color="#fff" />
             <Text style={styles.primaryButtonText}>Subir Foto</Text>
           </TouchableOpacity>
         </View>
+        }
     </SafeAreaView>
   );
 }

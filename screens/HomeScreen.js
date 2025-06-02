@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import Menu from '../components/Menu';
 
-export default function HomeScreen() {
+export default function HomeScreen({navigation}) {
   const routes = ['LoginScreen',
   'SignUpScreen',
   'GalleryScreen',
@@ -124,7 +124,7 @@ export default function HomeScreen() {
         <View style={styles.featuredPhotosContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Fotos Destacadas</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={()=>{navigation.navigate("Gallery")}}>
               <Text style={styles.seeAllText}>Ver todas</Text>
             </TouchableOpacity>
           </View>
@@ -135,7 +135,6 @@ export default function HomeScreen() {
                 <Image source={{ uri: photo.url }} style={styles.photoImage} />
                 <View style={styles.photoOverlay}>
                   <View style={styles.photoVotes}>
-                    <Ionicons name="heart" size={14} color="#E74C3C" />
                     <Text style={styles.photoVotesText}>{photo.votes}</Text>
                   </View>
                 </View>

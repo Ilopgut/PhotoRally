@@ -12,7 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { getAuth } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { FIRESTORE_DB } from '../FirebaseConfig'; // Asegúrate de tener esto configurado
+import { FIRESTORE_DB } from '../FirebaseConfig';
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
@@ -21,8 +21,8 @@ export default function ProfileScreen() {
 
   const getStatusColor = (isActive) => isActive ? '#4CAF50' : '#F44336';
   const getStatusText = (isActive) => isActive ? 'Activo' : 'Inactivo';
-  const getRoleColor = (role) => role === 'admin' ? '#FF5722' : '#2196F3';
-  const getRoleText = (role) => role === 'admin' ? 'Administrador' : 'Participante';
+  const getRoleColor = (role) => role === 'administrator' ? '#FF5722' : '#2196F3';
+  const getRoleText = (role) => role === 'administrator' ? 'Administrador' : 'Participante';
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -37,7 +37,7 @@ export default function ProfileScreen() {
             email: user.email,
             name: user.displayName || userDoc.data().name || "Nombre no disponible",
             is_active: userDoc.data().is_active ?? true,
-            role: userDoc.data().role || 'participant',
+            role: userDoc.data().role,
             photos_submitted: userDoc.data().photos_submitted || 0,
             votes_given: userDoc.data().votes_given || 0,
           });
@@ -145,12 +145,16 @@ export default function ProfileScreen() {
             </View>
           </View>
         </View>
-        <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.primaryButton} onPress={()=>{navigation.navigate("UploadPhoto")}}>
-            <Ionicons name="camera-outline" size={20} color="#fff" />
-            <Text style={styles.primaryButtonText}>Subir Foto</Text>
-          </TouchableOpacity>
-        </View>
+
+        {/*solo los participantes suben fotos*/}
+        {userData.role === 'participant' &&
+            <View style={styles.actionButtons}>
+              <TouchableOpacity style={styles.primaryButton} onPress={()=>{navigation.navigate("UploadPhoto")}}>
+                <Ionicons name="camera-outline" size={20} color="#fff" />
+                <Text style={styles.primaryButtonText}>Subir Foto</Text>
+              </TouchableOpacity>
+            </View>
+        }
       </ScrollView>
     </SafeAreaView>
   );
