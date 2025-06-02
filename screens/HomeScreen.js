@@ -9,7 +9,8 @@ export default function HomeScreen() {
   'GalleryScreen',
   'ProfileScreen',
   'UploadPhotoScreen',
-  'RankingScreen'];
+  'RankingScreen',
+  'UserDashboardScreen'];
 
   // Datos reales del concurso - Firebase Database Structure
   const rallyConfig = {

@@ -2,7 +2,8 @@ import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { FIREBASE_AUTH } from '../FirebaseConfig';
+import { doc, updateDoc } from 'firebase/firestore';
+import { FIREBASE_AUTH, FIRESTORE_DB } from '../FirebaseConfig';
 
 export default function Menu({ routes }) {
   const navigation = useNavigation();
@@ -23,9 +24,14 @@ export default function Menu({ routes }) {
 
   const handleSignOut = async () => {
     try {
+      if (user) {
+        const userRef = doc(FIRESTORE_DB, 'users', user.uid);
+        await updateDoc(userRef, { is_active: false });
+      }
+
       await signOut(FIREBASE_AUTH);
       toggleMenu();
-      navigation.replace('Login'); // Asegúrate de que 'Login' está definido en el stack navigator
+      navigation.replace('Login');
     } catch (error) {
       console.error('Error al cerrar sesión:', error.message);
     }
@@ -40,6 +46,7 @@ export default function Menu({ routes }) {
     { screen: 'UploadPhotoScreen', label: 'Subir Foto' },
     { screen: 'RankingScreen', label: 'Ranking' },
     { screen: 'EditProfileScreen', label: 'Editar perfil' },
+    { screen: 'UserDashboardScreen', label: 'Panel de usuario' },
   ];
 
   const rutasFiltradas = todasLasRutas.filter(r => routes.includes(r.screen));
@@ -74,7 +81,7 @@ export default function Menu({ routes }) {
               </View>
 
               <View style={styles.userInfo}>
-                <Text style={styles.userName}>{user?.displayName || user?.email || 'Invitado'}</Text>
+                <Text style={styles.userName}>{user?.displayName || 'Invitado'}</Text>
               </View>
             </View>
 
@@ -98,18 +105,19 @@ export default function Menu({ routes }) {
             ))}
           </View>
 
-          <View style={styles.menuFooter}>
-            <TouchableOpacity style={styles.footerItem} onPress={handleSignOut}>
-              <Text style={[styles.footerText, { color: '#E74C3C' }]}>Cerrar Sesión</Text>
-            </TouchableOpacity>
-          </View>
+          {user &&
+              <View style={styles.menuFooter}>
+                <TouchableOpacity style={styles.footerItem} onPress={handleSignOut}>
+                  <Text style={[styles.footerText, { color: '#E74C3C' }]}>Cerrar Sesión</Text>
+                </TouchableOpacity>
+              </View>
+          }
+
         </View>
       )}
     </>
   );
 }
-
-// (mantén aquí tu objeto `styles` igual que en tu código original)
 
 const styles = StyleSheet.create({
   header: {
@@ -119,7 +127,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    paddingTop: 10, // Account for status bar
+    paddingTop: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#333',
   },

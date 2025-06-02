@@ -110,11 +110,6 @@ export default function ProfileScreen() {
             <Text style={styles.statNumber}>{userData.votes_given}</Text>
             <Text style={styles.statLabel}>Votos Dados</Text>
           </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{getStatusText(userData.is_active)}</Text>
-            <Text style={styles.statLabel}>Estado</Text>
-          </View>
         </View>
 
         {/* Información del usuario */}
@@ -150,32 +145,12 @@ export default function ProfileScreen() {
               <Text style={styles.infoValue}>{getRoleText(userData.role)}</Text>
             </View>
           </View>
-
-          <View style={styles.infoItem}>
-            <View style={styles.infoIcon}>
-              <Ionicons name="pulse-outline" size={20} color="#6C7CE7" />
-            </View>
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Estado de Cuenta</Text>
-              <Text style={[styles.infoValue, { color: getStatusColor(userData.is_active) }]}>
-                {getStatusText(userData.is_active)}
-              </Text>
-            </View>
-          </View>
         </View>
         {/* Botón de acción */}
         <View style={styles.actionButtons}>
           <TouchableOpacity style={styles.primaryButton}>
             <Ionicons name="camera-outline" size={20} color="#fff" />
             <Text style={styles.primaryButtonText}>Subir Foto</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => navigation.navigate('EditProfileScreen')}
-          >
-            <Ionicons name="create-outline" size={20} color="#6C7CE7" />
-            <Text style={styles.secondaryButtonText}>Editar Perfil</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

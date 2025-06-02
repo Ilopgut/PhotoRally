@@ -4,8 +4,8 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingVi
 import { Formik } from 'formik';
 import * as Yup from 'yup';
 import { FIREBASE_AUTH, FIRESTORE_DB } from '../FirebaseConfig';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, setDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword } from 'firebase/auth';
 import Menu from '../components/Menu';
 
 export default function SignUpScreen({navigation}) {
@@ -20,20 +20,43 @@ export default function SignUpScreen({navigation}) {
   });
 
   const handleSignUp = async (values, { setSubmitting }) => {
+    setRegistrationError('');
+    const email = values.email.trim().toLowerCase();
+
     try {
-      // 1. Crear usuario en Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(FIREBASE_AUTH, values.email, values.password);
+      // 1. Verificar si el usuario ya existe en la colección 'users'
+      const q = query(collection(FIRESTORE_DB, 'users'), where('email', '==', email));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        setRegistrationError('Este correo ya está registrado. Intenta iniciar sesión o usa otro correo.');
+        return;
+      }
+
+      // 2. Intentar crear el usuario en Firebase Auth
+      let userCredential;
+      try {
+        userCredential = await createUserWithEmailAndPassword(FIREBASE_AUTH, email, values.password);
+      } catch (authError) {
+        if (authError.code === 'auth/email-already-in-use') {
+          // El usuario ya existe en Auth pero no en la colección -> inconsistencia
+          const tempUser = await signInWithEmailAndPassword(FIREBASE_AUTH, email, values.password);
+          userCredential = tempUser;
+        } else {
+          throw authError;
+        }
+      }
+
       const user = userCredential.user;
 
-      // 2. Actualizar el displayName en Auth (opcional)
+      // 3. Actualizar displayName si fue creado recientemente
       await updateProfile(user, { displayName: values.username });
 
-      // 3. Crear documento usuario en Firestore
-      // La UID es la que Firebase asigna automáticamente en user.uid
+      // 4. Crear documento en Firestore
       const userDocRef = doc(FIRESTORE_DB, 'users', user.uid);
       await setDoc(userDocRef, {
         uid: user.uid,
-        email: values.email,
+        email: email,
         name: values.username,
         photos_submitted: 0,
         votes_given: 0,
@@ -42,14 +65,22 @@ export default function SignUpScreen({navigation}) {
       });
 
       Alert.alert('Registro exitoso', 'Bienvenido, ' + values.username);
-      // Aquí podrías navegar a la pantalla principal o login, según tu flujo
       navigation.navigate('Home');
+
     } catch (error) {
-      setRegistrationError(error.message);
+      console.error('Error en el registro:', error);
+
+      if (error.code === 'auth/email-already-in-use') {
+        setRegistrationError('Este correo ya está en uso. Intenta iniciar sesión.');
+      } else {
+        setRegistrationError('Ocurrió un error durante el registro. Intenta más tarde.');
+      }
     } finally {
       setSubmitting(false);
     }
   };
+
+
 
   return (
     <View style={styles.container}>

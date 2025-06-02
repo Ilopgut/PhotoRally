@@ -5,9 +5,10 @@ import {
 } from 'react-native';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
-import { signInWithEmailAndPassword, fetchSignInMethodsForEmail } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useNavigation } from '@react-navigation/native';
-import { FIREBASE_AUTH } from '../FirebaseConfig';
+import { collection, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { FIREBASE_AUTH, FIRESTORE_DB } from '../FirebaseConfig';
 import Menu from '../components/Menu';
 
 const loginValidationSchema = Yup.object().shape({
@@ -30,22 +31,38 @@ export default function LoginScreen() {
 
   const handleLogin = async (values, { setSubmitting }) => {
     setAuthError('');
-    const email = values.email.trim();
+    const email = values.email.trim().toLowerCase(); // Asegurarse que coincide con Firestore
 
     try {
-      await signInWithEmailAndPassword(FIREBASE_AUTH, email, values.password);
+      // Verificar si el usuario existe en Firestore
+      const usersRef = collection(FIRESTORE_DB, 'users');
+      const snapshot = await getDocs(usersRef);
+      const userDoc = snapshot.docs.find(doc => doc.data().email?.toLowerCase() === email);
+
+      if (!userDoc) {
+        setAuthError('Este usuario no está registrado en el sistema.');
+        return;
+      }
+
+      // Si existe, proceder a autenticar
+      const userCredential = await signInWithEmailAndPassword(FIREBASE_AUTH, email, values.password);
+      const user = userCredential.user;
+
+      // Actualizar el campo is_active
+      const userRef = doc(FIRESTORE_DB, 'users', user.uid);
+      await updateDoc(userRef, { is_active: true });
+
       navigation.reset({
         index: 0,
         routes: [{ name: 'Home' }],
       });
     } catch (error) {
+      console.error('Login error:', error);
       setAuthError('Correo o contraseña incorrectos');
     } finally {
       setSubmitting(false);
     }
   };
-
-
 
 
   return (

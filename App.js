@@ -9,6 +9,7 @@ import ProfileScreen from './screens/ProfileScreen';
 import UploadPhotoScreen from './screens/UploadPhotoScreen';
 import RankingScreen from './screens/RankingScreen';
 import EditProfileScreen from './screens/EditProfileScreen';
+import UserDashboardScreen from './screens/UserDashboardScreen';
 
 const Stack = createStackNavigator();
 
@@ -24,6 +25,7 @@ export default function App() {
         <Stack.Screen name="UploadPhoto" component={UploadPhotoScreen} />
         <Stack.Screen name="Ranking" component={RankingScreen} />
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+        <Stack.Screen name="UserDashboard" component={UserDashboardScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
