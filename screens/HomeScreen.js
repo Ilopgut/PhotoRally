@@ -1,136 +1,121 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Menu from '../components/Menu';
+import { doc, getDoc, getDocs, collection } from 'firebase/firestore';
+import { FIRESTORE_DB } from '../FirebaseConfig';
 
-export default function HomeScreen({navigation}) {
-  const routes = ['LoginScreen',
-  'SignUpScreen',
-  'GalleryScreen',
-  'ProfileScreen',
-  'UploadPhotoScreen',
-  'RankingScreen',
-  'UserDashboardScreen'];
+export default function HomeScreen({ navigation }) {
+  const routes = [
+    'LoginScreen',
+    'SignUpScreen',
+    'GalleryScreen',
+    'ProfileScreen',
+    'UploadPhotoScreen',
+    'RankingScreen',
+    'UserDashboardScreen',
+  ];
 
-  // Datos reales del concurso - Firebase Database Structure
-  const rallyConfig = {
-    created_at: "18 de mayo de 2025, 12:00:00 a.m. UTC+2",
-    description: "Rally de fotografía de temática naturaleza",
-    is_active: true,
-    max_photos_per_user: 3,
-    max_votes_per_user: 5,
-    registration_end: "25 de mayo de 2025, 12:00:00 a.m. UTC+2",
-    registration_start: "24 de mayo de 2025, 12:00:00 a.m. UTC+2",
-    rules: "reglas",
-    submission_end: "27 de mayo de 2025, 12:00:00 a.m. UTC+2",
-    submission_start: "26 de mayo de 2025, 12:00:00 a.m. UTC+2",
-    title: "PhotoRally",
-    voting_end: "29 de mayo de 2025, 12:00:00 a.m. UTC+2",
-    voting_start: "28 de mayo de 2025, 12:00:00 a.m. UTC+2"
-  };
+  const [rallyInfo, setRallyInfo] = useState(null);
+  const [photos, setPhotos] = useState(null);
 
-  // Función para calcular días restantes
-  const calculateDaysRemaining = (endDate) => {
-    const today = new Date();
-    const end = new Date(endDate);
-    const diffTime = end - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays > 0 ? diffDays : 0;
-  };
+  useEffect(() => {
+    const fetchRallyData = async () => {
+      try {
+        const rallyDocRef = doc(FIRESTORE_DB, 'rally_config', 'rallyEjemplo');
+        const rallyDoc = await getDoc(rallyDocRef);
 
-  // Datos calculados para el dashboard
-  const dashboardData = {
-    activeContest: {
-      title: rallyConfig.title,
-      description: rallyConfig.description,
-      daysLeft: calculateDaysRemaining(rallyConfig.voting_end),
-      totalPhotos: 234, // Esto vendrá de Firebase en el futuro
-      participants: 89   // Esto vendrá de Firebase en el futuro
-    },
-    recentPhotos: [
-      { id: 1, url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400", votes: 23, title: "Atardecer en la montaña" },
-      { id: 2, url: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400", votes: 18, title: "Bosque misterioso" },
-      { id: 3, url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400", votes: 31, title: "Playa tropical" }
-    ]
-  };
+        setRallyInfo({
+          created_at: rallyDoc.data().created_at,
+          description: rallyDoc.data().description,
+          is_active: rallyDoc.data().is_active,
+          max_photos_per_user: rallyDoc.data().max_photos_per_user,
+          max_votes_per_user: rallyDoc.data().max_votes_per_user,
+          registration_end: rallyDoc.data().registration_end,
+          registration_start: rallyDoc.data().registration_start,
+          submission_end: rallyDoc.data().submission_end,
+          submission_start: rallyDoc.data().submission_start,
+          title: rallyDoc.data().title,
+          voting_end: rallyDoc.data().voting_end,
+          voting_start: rallyDoc.data().voting_start,
+        });
 
-  const contestRules = {
-    theme: "Fotografía de Naturaleza",
-    description: rallyConfig.description,
-    rules: [
-      `Máximo ${rallyConfig.max_photos_per_user} fotografías por participante`,
-      `Máximo ${rallyConfig.max_votes_per_user} votos por usuario`,
-      "Registro: 24-25 de mayo de 2025",
-      "Envío de fotos: 26-27 de mayo de 2025",
-      "Votación: 28-29 de mayo de 2025",
-      "Temática: Naturaleza y paisajes"
-    ]
-  };
+        //de aqui saldran las 3 fotos mas votadas
+        setPhotos([
+          { id: 1, url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400", votes: 23, title: "Atardecer en la montaña" },
+          { id: 2, url: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400", votes: 18, title: "Bosque misterioso" },
+          { id: 3, url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400", votes: 31, title: "Playa tropical" }
+        ]);
+
+
+      } catch (error) {
+        console.error('Error al obtener la informacion:', error);
+      }
+    };
+
+    fetchRallyData();
+  }, []);
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light"/>
+    <SafeAreaView style={styles.container}>
+      <StatusBar style="light" />
       <Menu routes={routes} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Sección de Normas del Concurso */}
         <View style={styles.rulesContainer}>
           <View style={styles.rulesHeader}>
             <Ionicons name="document-text" size={24} color="#4ECDC4" style={styles.rulesIcon} />
             <Text style={styles.rulesTitle}>Normas del Concurso</Text>
           </View>
 
-          <View style={styles.themeSection}>
-            <Text style={styles.themeTitle}>{contestRules.theme}</Text>
-            <Text style={styles.themeDescription}>{contestRules.description}</Text>
-          </View>
+          {rallyInfo && (
+            <>
+              <View style={styles.themeSection}>
+                <Text style={styles.themeTitle}>{rallyInfo.title}</Text>
+                <Text style={styles.themeDescription}>{rallyInfo.description}</Text>
+              </View>
 
-          <View style={styles.rulesList}>
-            {contestRules.rules.map((rule, index) => (
-              <View key={index} style={styles.ruleItem}>
-                <View style={styles.ruleBullet}>
-                  <Text style={styles.ruleNumber}>{index + 1}</Text>
+              <View style={styles.rulesList}>
+                <View style={styles.ruleItem}>
+                  <View style={styles.ruleBullet}><Text style={styles.ruleNumber}>1</Text></View>
+                  <Text style={styles.ruleText}>Se permitirán máximo {rallyInfo.max_photos_per_user} fotografías por participante</Text>
                 </View>
-                <Text style={styles.ruleText}>{rule}</Text>
+                <View style={styles.ruleItem}>
+                  <View style={styles.ruleBullet}><Text style={styles.ruleNumber}>2</Text></View>
+                  <Text style={styles.ruleText}>Se permitirán máximo {rallyInfo.max_votes_per_user} votos por usuario</Text>
+                </View>
+                <View style={styles.ruleItem}>
+                  <View style={styles.ruleBullet}><Text style={styles.ruleNumber}>3</Text></View>
+                  <Text style={styles.ruleText}>Registro: {new Date(rallyInfo.registration_start).toLocaleDateString()} - {new Date(rallyInfo.registration_end).toLocaleDateString()}</Text>
+                </View>
+                <View style={styles.ruleItem}>
+                  <View style={styles.ruleBullet}><Text style={styles.ruleNumber}>4</Text></View>
+                  <Text style={styles.ruleText}>Envío de fotos: {new Date(rallyInfo.submission_start).toLocaleDateString()} - {new Date(rallyInfo.submission_end).toLocaleDateString()}</Text>
+                </View>
+                <View style={styles.ruleItem}>
+                  <View style={styles.ruleBullet}><Text style={styles.ruleNumber}>5</Text></View>
+                  <Text style={styles.ruleText}>Votación: {new Date(rallyInfo.voting_start).toLocaleDateString()} - {new Date(rallyInfo.voting_end).toLocaleDateString()}</Text>
+                </View>
+                <View style={styles.ruleItem}>
+                  <View style={styles.ruleBullet}><Text style={styles.ruleNumber}>6</Text></View>
+                  <Text style={styles.ruleText}>Temática: Naturaleza y paisajes</Text>
+                </View>
               </View>
-            ))}
-          </View>
+            </>
+          )}
         </View>
 
-
-        {/* Estadísticas del concurso */}
-        <View style={styles.contestStatsContainer}>
-          <Text style={styles.sectionTitle}>Estadísticas del Concurso</Text>
-          <View style={styles.contestStatsGrid}>
-            <View style={styles.contestStatItem}>
-              <Ionicons name="images" size={20} color="#6C7CE7" />
-              <View style={styles.contestStatText}>
-                <Text style={styles.contestStatNumber}>{dashboardData.activeContest.totalPhotos}</Text>
-                <Text style={styles.contestStatLabel}>Fotos Totales</Text>
-              </View>
-            </View>
-
-            <View style={styles.contestStatItem}>
-              <Ionicons name="people" size={20} color="#6C7CE7" />
-              <View style={styles.contestStatText}>
-                <Text style={styles.contestStatNumber}>{dashboardData.activeContest.participants}</Text>
-                <Text style={styles.contestStatLabel}>Participantes</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Fotos destacadas */}
         <View style={styles.featuredPhotosContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Fotos Destacadas</Text>
-            <TouchableOpacity onPress={()=>{navigation.navigate("Gallery")}}>
+            <TouchableOpacity onPress={() => navigation.navigate("Gallery")}>
               <Text style={styles.seeAllText}>Ver todas</Text>
             </TouchableOpacity>
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosScroll}>
-            {dashboardData.recentPhotos.map((photo) => (
+            {photos.map((photo) => (
               <TouchableOpacity key={photo.id} style={styles.photoCard}>
                 <Image source={{ uri: photo.url }} style={styles.photoImage} />
                 <View style={styles.photoOverlay}>
@@ -144,7 +129,7 @@ export default function HomeScreen({navigation}) {
           </ScrollView>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

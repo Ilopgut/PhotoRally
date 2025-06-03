@@ -54,6 +54,7 @@ export default function UserDashboardScreen() {
           onPress: async () => {
             try {
               await deleteDoc(doc(FIRESTORE_DB, 'users', userId));
+              //muestra la lista actualizada sin el usuario eliminado
               setUsers((prevUsers) => prevUsers.filter((user) => user.id !== userId));
             } catch (error) {
               console.error('Error al eliminar usuario:', error);
