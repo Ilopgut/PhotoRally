@@ -18,7 +18,7 @@ export default function HomeScreen({ navigation }) {
   ];
 
   const [rallyInfo, setRallyInfo] = useState(null);
-  const [photos, setPhotos] = useState(null);
+  const [photos, setPhotos] = useState([]);
 
   useEffect(() => {
     const fetchRallyData = async () => {
@@ -40,7 +40,6 @@ export default function HomeScreen({ navigation }) {
           voting_end: rallyDoc.data().voting_end,
           voting_start: rallyDoc.data().voting_start,
         });
-
         //de aqui saldran las 3 fotos mas votadas
         setPhotos([
           { id: 1, url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400", votes: 23, title: "Atardecer en la montaña" },

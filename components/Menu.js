@@ -58,7 +58,7 @@ export default function Menu({ routes }) {
       { screen: 'SignUpScreen', label: 'Registrarse', onlyIfLoggedOut: true },
       { screen: 'GalleryScreen', label: 'Galería', public: true },
       { screen: 'ProfileScreen', label: 'Perfil' },
-      { screen: 'UploadPhotoScreen', label: 'Subir Foto' },
+      { screen: 'UploadPhotoScreen', label: 'Subir Foto', participantOnly: true  },
       { screen: 'RankingScreen', label: 'Ranking', public: true },
       { screen: 'EditProfileScreen', label: 'Editar perfil' },
       { screen: 'UserDashboardScreen', label: 'Panel de usuario', adminOnly: true },
@@ -77,6 +77,11 @@ export default function Menu({ routes }) {
       // Si es ruta solo para admin, verificar el rol
       if (ruta.adminOnly) {
         return userData?.role === 'administrator';
+      }
+
+      // Si es ruta solo para admin, verificar el rol
+      if (ruta.participantOnly) {
+        return userData?.role === 'participant';
       }
 
       // Mostrar rutas que el usuario tiene acceso (por lista `routes`)
@@ -106,12 +111,6 @@ export default function Menu({ routes }) {
         <View style={styles.sideMenu}>
           <View style={styles.menuHeader}>
             <View style={styles.userSection}>
-              <View style={styles.avatarPlaceholder}>
-                <Text style={{ color: '#fff', fontSize: 18 }}>
-                  {authUser?.email?.charAt(0)?.toUpperCase() || 'I'}
-                </Text>
-              </View>
-
               <View style={styles.userInfo}>
                 <Text style={styles.userName}>
                   {authUser?.displayName || 'Invitado'}
@@ -160,7 +159,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    paddingTop: 10,
+    paddingTop: 50,
     borderBottomWidth: 1,
     borderBottomColor: '#333',
   },
@@ -215,6 +214,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 15,
+    marginTop:15,
   },
   avatarPlaceholder: {
     width: 50,

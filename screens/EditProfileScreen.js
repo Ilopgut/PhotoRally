@@ -11,18 +11,24 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
+import * as ImagePicker from 'expo-image-picker';
 import { getAuth, updateProfile } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { FIRESTORE_DB } from '../FirebaseConfig';
+import CloudinaryService from '../services/CloudinaryService';
 
 export default function EditProfileScreen({ navigation }) {
   const auth = getAuth();
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [imageLoading, setImageLoading] = useState(false);
+  const [currentImageUrl, setCurrentImageUrl] = useState(null);
 
   // Schema de validación (solo nombre)
   const EditProfileSchema = Yup.object().shape({
@@ -41,10 +47,13 @@ export default function EditProfileScreen({ navigation }) {
         const userDoc = await getDoc(userDocRef);
 
         if (userDoc.exists()) {
-          setUserData({
+          const data = {
             name: user.displayName || userDoc.data().name || '',
             email: user.email || '',
-          });
+            profileImageUrl: userDoc.data().profileImageUrl || null,
+          };
+          setUserData(data);
+          setCurrentImageUrl(data.profileImageUrl);
         }
       }
     } catch (error) {
@@ -52,6 +61,98 @@ export default function EditProfileScreen({ navigation }) {
       Alert.alert('Error', 'No se pudo cargar la información del usuario');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const showImagePicker = () => {
+    Alert.alert(
+      'Seleccionar imagen',
+      'Elige una opción',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Cámara', onPress: () => pickImage('camera') },
+        { text: 'Galería', onPress: () => pickImage('gallery') },
+        ...(currentImageUrl ? [{ text: 'Eliminar foto', onPress: deleteImage, style: 'destructive' }] : [])
+      ]
+    );
+  };
+
+  const pickImage = async (source) => {
+    try {
+      setImageLoading(true);
+
+      let result;
+      if (source === 'camera') {
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+      } else {
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+      }
+
+      if (!result.canceled && result.assets[0]) {
+        await uploadImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Error al seleccionar la imagen');
+    } finally {
+      setImageLoading(false);
+    }
+  };
+
+  const uploadImage = async (imageUri) => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const uploadResult = await CloudinaryService.uploadImage(imageUri, user.uid);
+
+      if (uploadResult.success) {
+        // Actualizar Firestore
+        const userDocRef = doc(FIRESTORE_DB, 'users', user.uid);
+        await updateDoc(userDocRef, {
+          profileImageUrl: uploadResult.url,
+        });
+
+        setCurrentImageUrl(uploadResult.url);
+        Alert.alert('Éxito', 'Imagen actualizada correctamente');
+      } else {
+        Alert.alert('Error', 'Error al subir la imagen: ' + uploadResult.error);
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      Alert.alert('Error', 'Error al procesar la imagen');
+    }
+  };
+
+  const deleteImage = async () => {
+    try {
+      setImageLoading(true);
+      const user = auth.currentUser;
+      if (!user) return;
+
+      // Actualizar Firestore (eliminar URL)
+      const userDocRef = doc(FIRESTORE_DB, 'users', user.uid);
+      await updateDoc(userDocRef, {
+        profileImageUrl: null,
+      });
+
+      setCurrentImageUrl(null);
+      Alert.alert('Éxito', 'Imagen eliminada correctamente');
+    } catch (error) {
+      console.error('Error deleting image:', error);
+      Alert.alert('Error', 'Error al eliminar la imagen');
+    } finally {
+      setImageLoading(false);
     }
   };
 
@@ -94,6 +195,32 @@ export default function EditProfileScreen({ navigation }) {
   };
 
   const getInitial = (name) => name ? name.charAt(0).toUpperCase() : '?';
+
+  const renderProfileImage = (name) => {
+    if (imageLoading) {
+      return (
+        <View style={styles.profileImagePlaceholder}>
+          <ActivityIndicator size="large" color="#fff" />
+        </View>
+      );
+    }
+
+    if (currentImageUrl) {
+      const optimizedUrl = CloudinaryService.getOptimizedUrl(currentImageUrl, 100, 100);
+      return (
+        <Image
+          source={{ uri: optimizedUrl }}
+          style={styles.profileImage}
+        />
+      );
+    } else {
+      return (
+        <View style={styles.profileImagePlaceholder}>
+          <Text style={styles.profileInitial}>{getInitial(name)}</Text>
+        </View>
+      );
+    }
+  };
 
   if (loading) {
     return (
@@ -148,15 +275,19 @@ export default function EditProfileScreen({ navigation }) {
           >
             {({ handleChange, handleBlur, handleSubmit, values, errors, touched, isSubmitting }) => (
               <>
-                {/* Avatar placeholder */}
-                <View style={styles.imageContainer}>
-                  <View style={styles.profileImagePlaceholder}>
-                    <Text style={styles.profileInitial}>{getInitial(values.name)}</Text>
-                  </View>
-                  <TouchableOpacity style={styles.editIcon}>
+                {/* Avatar */}
+                <TouchableOpacity
+                  style={styles.imageContainer}
+                  onPress={showImagePicker}
+                  disabled={imageLoading}
+                >
+                  {renderProfileImage(values.name)}
+                  <View style={styles.editIcon}>
                     <Ionicons name="camera" size={20} color="#fff" />
-                  </TouchableOpacity>
-                </View>
+                  </View>
+                </TouchableOpacity>
+
+                <Text style={styles.imageHint}>Toca para cambiar tu foto</Text>
 
                 {/* Campo Nombre */}
                 <View style={styles.inputContainer}>
@@ -182,9 +313,9 @@ export default function EditProfileScreen({ navigation }) {
                 </View>
 
                 <TouchableOpacity
-                  style={[styles.saveButton, isSubmitting && styles.saveButtonDisabled]}
+                  style={[styles.saveButton, (isSubmitting || imageLoading) && styles.saveButtonDisabled]}
                   onPress={handleSubmit}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || imageLoading}
                 >
                   <Ionicons name="save" size={20} color="#fff" />
                   <Text style={styles.saveButtonText}>
@@ -229,8 +360,13 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     alignSelf: 'center',
-    marginBottom: 30,
+    marginBottom: 10,
     position: 'relative',
+  },
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
   profileImagePlaceholder: {
     width: 100,
@@ -254,6 +390,12 @@ const styles = StyleSheet.create({
     padding: 4,
     borderWidth: 2,
     borderColor: '#0F0F23',
+  },
+  imageHint: {
+    textAlign: 'center',
+    color: '#A0A0A0',
+    fontSize: 12,
+    marginBottom: 30,
   },
   inputContainer: {
     marginBottom: 15,

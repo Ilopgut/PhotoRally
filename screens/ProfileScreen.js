@@ -7,12 +7,14 @@ import {
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { getAuth } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { FIRESTORE_DB } from '../FirebaseConfig';
+import CloudinaryService from '../services/CloudinaryService';
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
@@ -40,6 +42,7 @@ export default function ProfileScreen() {
             role: userDoc.data().role,
             photos_submitted: userDoc.data().photos_submitted || 0,
             votes_given: userDoc.data().votes_given || 0,
+            profileImageUrl: userDoc.data().profileImageUrl || null,
           });
         }
       }
@@ -47,6 +50,36 @@ export default function ProfileScreen() {
 
     fetchUserData();
   }, []);
+
+  // Refrescar datos cuando regresamos de EditProfile
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      const fetchUserData = async () => {
+        const user = auth.currentUser;
+        if (user) {
+          const userDocRef = doc(FIRESTORE_DB, 'users', user.uid);
+          const userDoc = await getDoc(userDocRef);
+
+          if (userDoc.exists()) {
+            setUserData({
+              uid: user.uid,
+              email: user.email,
+              name: user.displayName || userDoc.data().name || "Nombre no disponible",
+              is_active: userDoc.data().is_active ?? true,
+              role: userDoc.data().role,
+              photos_submitted: userDoc.data().photos_submitted || 0,
+              votes_given: userDoc.data().votes_given || 0,
+              profileImageUrl: userDoc.data().profileImageUrl || null,
+            });
+          }
+        }
+      };
+
+      fetchUserData();
+    });
+
+    return unsubscribe;
+  }, [navigation]);
 
   if (!userData) {
     return (
@@ -60,6 +93,25 @@ export default function ProfileScreen() {
   }
 
   const getInitial = (name) => name ? name.charAt(0).toUpperCase() : '?';
+
+  const renderProfileImage = () => {
+    if (userData.profileImageUrl) {
+      const optimizedUrl = CloudinaryService.getOptimizedUrl(userData.profileImageUrl, 100, 100);
+      return (
+        <Image
+          source={{ uri: optimizedUrl }}
+          style={styles.profileImage}
+          defaultSource={{ uri: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==' }}
+        />
+      );
+    } else {
+      return (
+        <View style={styles.profileImagePlaceholder}>
+          <Text style={styles.profileInitial}>{getInitial(userData.name)}</Text>
+        </View>
+      );
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -79,9 +131,7 @@ export default function ProfileScreen() {
         {/* Perfil */}
         <View style={styles.profileSection}>
           <View style={styles.imageContainer}>
-            <View style={styles.profileImagePlaceholder}>
-              <Text style={styles.profileInitial}>{getInitial(userData.name)}</Text>
-            </View>
+            {renderProfileImage()}
             <View style={[styles.statusBadge, { backgroundColor: getStatusColor(userData.is_active) }]}>
               <Ionicons
                 name={userData.is_active ? "checkmark-circle" : "close-circle"}
@@ -159,6 +209,7 @@ export default function ProfileScreen() {
     </SafeAreaView>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -169,7 +220,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 20,
-    paddingTop: 10,
+    paddingTop: 50,
     backgroundColor: '#1a1a1a',
   },
   backButton: {
@@ -181,9 +232,9 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   profileImage: {
-      width: 100,
-      height: 100,
-      borderRadius: 50,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
   editButton: {
     padding: 8,
