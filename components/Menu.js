@@ -58,7 +58,6 @@ export default function Menu({ routes }) {
       { screen: 'SignUpScreen', label: 'Registrarse', onlyIfLoggedOut: true },
       { screen: 'GalleryScreen', label: 'Galería', public: true },
       { screen: 'ProfileScreen', label: 'Perfil' },
-      { screen: 'UploadPhotoScreen', label: 'Subir Foto', participantOnly: true  },
       { screen: 'RankingScreen', label: 'Ranking', public: true },
       { screen: 'EditProfileScreen', label: 'Editar perfil' },
       { screen: 'UserDashboardScreen', label: 'Panel de usuario', adminOnly: true },

@@ -25,7 +25,6 @@ export default function LoginScreen() {
     'SignUpScreen',
     'GalleryScreen',
     'ProfileScreen',
-    'UploadPhotoScreen',
     'RankingScreen'
   ];
 

@@ -6,10 +6,10 @@ import LoginScreen from './screens/LoginScreen';
 import SignUpScreen from './screens/SignUpScreen';
 import GalleryScreen from './screens/GalleryScreen';
 import ProfileScreen from './screens/ProfileScreen';
-import UploadPhotoScreen from './screens/UploadPhotoScreen';
 import RankingScreen from './screens/RankingScreen';
 import EditProfileScreen from './screens/EditProfileScreen';
 import UserDashboardScreen from './screens/UserDashboardScreen';
+import PhotoDetailScreen from './screens/PhotoDetailScreen';
 
 const Stack = createStackNavigator();
 
@@ -22,10 +22,10 @@ export default function App() {
         <Stack.Screen name="SignUp" component={SignUpScreen} />
         <Stack.Screen name="Gallery" component={GalleryScreen} />
         <Stack.Screen name="Profile" component={ProfileScreen} />
-        <Stack.Screen name="UploadPhoto" component={UploadPhotoScreen} />
         <Stack.Screen name="Ranking" component={RankingScreen} />
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
         <Stack.Screen name="UserDashboard" component={UserDashboardScreen} />
+        <Stack.Screen name="PhotoDetail" component={PhotoDetailScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -23,7 +23,6 @@ export default function RankingScreen({ navigation }) {
     'ProfileScreen',
     'UploadPhotoScreen',
     'HomeScreen',
-    'EditProfileScreen',
   ];
 
   useEffect(() => {
