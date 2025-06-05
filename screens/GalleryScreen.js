@@ -114,6 +114,7 @@ export default function GalleryScreen({ navigation }) {
         photo_id: `photo_${Date.now()}`,
         title: photoTitle.trim(),
         image_url: uploadResult.url,
+        status: 'pendiente',
         user_id: user.uid,
         user_name: userName,
         vote_count: 0,

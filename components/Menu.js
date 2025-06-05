@@ -10,12 +10,30 @@ export default function Menu({ routes }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [authUser, setAuthUser] = useState(null);
   const [userData, setUserData] = useState(null);
+  const [rallyTitle, setRallyTitle] = useState(null);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
 
   useEffect(() => {
+
+    const loadTitle = async () => {
+        try{
+            //obtener el titulo del concurso
+            const rallyDocRef = doc(FIRESTORE_DB, 'rally_config', 'rallyEjemplo');
+            const rallyDoc = await getDoc(rallyDocRef);
+
+            setRallyTitle(rallyDoc.data().title);
+        }catch{
+            setRallyTitle('Rally de fotografia');
+        }
+    };
+
+    loadTitle();
+
+    //logica para obtener informacion del usuario solo si esta autenticado
+    //y existe en la base de datos
     const unsubscribe = onAuthStateChanged(FIREBASE_AUTH, async (user) => {
       setAuthUser(user);
 
@@ -94,7 +112,7 @@ export default function Menu({ routes }) {
           <Text style={{ color: '#fff', fontSize: 35 }}>≡</Text>
         </TouchableOpacity>
         <View style={styles.titleContainer}>
-          <Text style={styles.appName}>PhotoRally</Text>
+          <Text style={styles.appName}>{rallyTitle}</Text>
         </View>
       </View>
 

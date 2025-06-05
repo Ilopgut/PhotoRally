@@ -195,16 +195,6 @@ export default function ProfileScreen() {
             </View>
           </View>
         </View>
-
-        {/*solo los participantes suben fotos*/}
-        {userData.role === 'participant' &&
-            <View style={styles.actionButtons}>
-              <TouchableOpacity style={styles.primaryButton} onPress={()=>{navigation.navigate("UploadPhoto")}}>
-                <Ionicons name="camera-outline" size={20} color="#fff" />
-                <Text style={styles.primaryButtonText}>Subir Foto</Text>
-              </TouchableOpacity>
-            </View>
-        }
       </ScrollView>
     </SafeAreaView>
   );

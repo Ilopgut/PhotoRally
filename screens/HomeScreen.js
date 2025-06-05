@@ -40,14 +40,6 @@ export default function HomeScreen({ navigation }) {
           voting_end: rallyDoc.data().voting_end,
           voting_start: rallyDoc.data().voting_start,
         });
-        //de aqui saldran las 3 fotos mas votadas
-        setPhotos([
-          { id: 1, url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400", votes: 23, title: "Atardecer en la montaña" },
-          { id: 2, url: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400", votes: 18, title: "Bosque misterioso" },
-          { id: 3, url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400", votes: 31, title: "Playa tropical" }
-        ]);
-
-
       } catch (error) {
         console.error('Error al obtener la informacion:', error);
       }
@@ -103,29 +95,6 @@ export default function HomeScreen({ navigation }) {
               </View>
             </>
           )}
-        </View>
-
-        <View style={styles.featuredPhotosContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Fotos Destacadas</Text>
-            <TouchableOpacity onPress={() => navigation.navigate("Gallery")}>
-              <Text style={styles.seeAllText}>Ver todas</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosScroll}>
-            {photos.map((photo) => (
-              <TouchableOpacity key={photo.id} style={styles.photoCard}>
-                <Image source={{ uri: photo.url }} style={styles.photoImage} />
-                <View style={styles.photoOverlay}>
-                  <View style={styles.photoVotes}>
-                    <Text style={styles.photoVotesText}>{photo.votes}</Text>
-                  </View>
-                </View>
-                <Text style={styles.photoTitle} numberOfLines={2}>{photo.title}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
         </View>
       </ScrollView>
     </SafeAreaView>

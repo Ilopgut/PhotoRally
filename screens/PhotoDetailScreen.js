@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   SafeAreaView,
   TouchableOpacity,
+  Image,
   Alert,
-  Dimensions,
-  ScrollView,
   ActivityIndicator,
+  ScrollView,
+  StatusBar
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getAuth } from 'firebase/auth';
@@ -22,136 +22,178 @@ import {
   getDocs,
   addDoc,
   updateDoc,
-  increment,
-  deleteDoc
+  deleteDoc,
+  increment
 } from 'firebase/firestore';
 import { FIRESTORE_DB } from '../FirebaseConfig';
-import CloudinaryService from '../services/CloudinaryService';
-
-const screenWidth = Dimensions.get('window').width;
 
 export default function PhotoDetailScreen({ navigation, route }) {
   const { photo } = route.params;
   const auth = getAuth();
-  const [hasVoted, setHasVoted] = useState(false);
-  const [voteCount, setVoteCount] = useState(photo.vote_count || 0);
-  const [loading, setLoading] = useState(true);
+  const [userUID, setUserUID] = useState(null);
   const [userRole, setUserRole] = useState(null);
-  const [voting, setVoting] = useState(false);
+  const [userVotesGiven, setUserVotesGiven] = useState(0);
+  const [maxVotes, setMaxVotes] = useState(0);
+  const [hasVoted, setHasVoted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    checkUserVote();
-    fetchUserRole();
-  }, []);
+    fetchUserData();
+    fetchRallyConfig();
+    if (userRole === 'participant') {
+      checkUserVote();
+    }
+  }, [userRole]);
 
-  const fetchUserRole = async () => {
+  const fetchUserData = async () => {
     const user = auth.currentUser;
+    setUserUID(user.uid);
     if (user) {
       const userDocRef = doc(FIRESTORE_DB, 'users', user.uid);
       const userDoc = await getDoc(userDocRef);
       if (userDoc.exists()) {
-        setUserRole(userDoc.data().role);
+        const userData = userDoc.data();
+        setUserRole(userData.role);
+        setUserVotesGiven(userData.votes_given || 0);
       }
     }
   };
 
-  const checkUserVote = async () => {
+  const fetchRallyConfig = async () => {
     try {
-      const user = auth.currentUser;
-      if (!user) return;
-
-      const votesRef = collection(FIRESTORE_DB, 'votes');
-      const q = query(
-        votesRef,
-        where('photo_id', '==', photo.photo_id),
-        where('user_id', '==', user.uid)
-      );
-
-      const querySnapshot = await getDocs(q);
-      setHasVoted(!querySnapshot.empty);
+      const configRef = collection(FIRESTORE_DB, 'rally_config');
+      const configSnapshot = await getDocs(configRef);
+      if (!configSnapshot.empty) {
+        const configData = configSnapshot.docs[0].data();
+        setMaxVotes(configData.max_votes_per_user || 5);
+      }
     } catch (error) {
-      console.error('Error checking vote:', error);
+      console.error('Error fetching rally config:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVote = async () => {
+  const checkUserVote = async () => {
     const user = auth.currentUser;
-    if (!user) {
-      Alert.alert('Error', 'Debes estar autenticado para votar');
-      return;
-    }
-
-    // Verificar que no sea su propia foto
-    if (photo.user_id === user.uid) {
-      Alert.alert('Error', 'No puedes votar tu propia foto');
-      return;
-    }
-
-    setVoting(true);
-    try {
-      if (hasVoted) {
-        // Quitar voto
-        const votesRef = collection(FIRESTORE_DB, 'votes');
-        const q = query(
-          votesRef,
-          where('photo_id', '==', photo.photo_id),
-          where('user_id', '==', user.uid)
-        );
-
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-          await deleteDoc(querySnapshot.docs[0].ref);
-
-          // Decrementar contador en la foto
-          const photoRef = doc(FIRESTORE_DB, 'photos', photo.id);
-          await updateDoc(photoRef, {
-            vote_count: increment(-1)
-          });
-
-          // Decrementar contador de votos dados del usuario
-          const userRef = doc(FIRESTORE_DB, 'users', user.uid);
-          await updateDoc(userRef, {
-            votes_given: increment(-1)
-          });
-
-          setHasVoted(false);
-          setVoteCount(prev => prev - 1);
-        }
-      } else {
-        // Agregar voto
-        await addDoc(collection(FIRESTORE_DB, 'votes'), {
-          photo_id: photo.photo_id,
-          user_id: user.uid,
-          created_at: new Date(),
-        });
-
-        // Incrementar contador en la foto
-        const photoRef = doc(FIRESTORE_DB, 'photos', photo.id);
-        await updateDoc(photoRef, {
-          vote_count: increment(1)
-        });
-
-        // Incrementar contador de votos dados del usuario
-        const userRef = doc(FIRESTORE_DB, 'users', user.uid);
-        await updateDoc(userRef, {
-          votes_given: increment(1)
-        });
-
-        setHasVoted(true);
-        setVoteCount(prev => prev + 1);
-      }
-    } catch (error) {
-      console.error('Error voting:', error);
-      Alert.alert('Error', 'Error al procesar el voto');
-    } finally {
-      setVoting(false);
+    if (user) {
+      const votesRef = collection(FIRESTORE_DB, 'votes');
+      const q = query(
+        votesRef,
+        where('user_id', '==', user.uid),
+        where('photo_id', '==', photo.photo_id)
+      );
+      const querySnapshot = await getDocs(q);
+      setHasVoted(!querySnapshot.empty);
     }
   };
 
-  const canVote = () => {
-    return userRole === 'participant' && photo.user_id !== auth.currentUser?.uid;
+  const handleVote = async () => {
+    if (userVotesGiven >= maxVotes) {
+      Alert.alert('Límite alcanzado', `Ya has votado el máximo de ${maxVotes} fotos`);
+      return;
+    }
+
+    if (hasVoted) {
+      Alert.alert('Ya votaste', 'Ya has votado esta foto');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const user = auth.currentUser;
+
+      // Crear voto
+      await addDoc(collection(FIRESTORE_DB, 'votes'), {
+        photo_id: photo.photo_id,
+        user_id: user.uid,
+      });
+
+      // Actualizar contador de votos de la foto
+      const photoRef = doc(FIRESTORE_DB, 'photos', photo.id);
+      await updateDoc(photoRef, {
+        vote_count: increment(1)
+      });
+
+      // Actualizar contador de votos del usuario
+      const userRef = doc(FIRESTORE_DB, 'users', user.uid);
+      await updateDoc(userRef, {
+        votes_given: increment(1)
+      });
+
+      setHasVoted(true);
+      setUserVotesGiven(prev => prev + 1);
+      Alert.alert('¡Voto registrado!', 'Tu voto ha sido guardado correctamente');
+
+    } catch (error) {
+      console.error('Error voting:', error);
+      Alert.alert('Error', 'No se pudo registrar el voto');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    setActionLoading(true);
+    try {
+      const photoRef = doc(FIRESTORE_DB, 'photos', photo.id);
+      await updateDoc(photoRef, {
+        status: 'aprobado'
+      });
+
+      Alert.alert('Foto aprobada', 'La foto ya es visible para los participantes');
+      navigation.goBack();
+    } catch (error) {
+      console.error('Error approving photo:', error);
+      Alert.alert('Error', 'No se pudo aprobar la foto');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReject = async () => {
+    Alert.alert(
+      'Rechazar foto',
+      '¿Estás seguro? Esta acción eliminará la foto permanentemente',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Rechazar',
+          style: 'destructive',
+          onPress: async () => {
+            setActionLoading(true);
+            try {
+              // Eliminar votos relacionados
+              const votesRef = collection(FIRESTORE_DB, 'votes');
+              const q = query(votesRef, where('photo_id', '==', photo.photo_id));
+              const votesSnapshot = await getDocs(q);
+
+              for (const voteDoc of votesSnapshot.docs) {
+                await deleteDoc(doc(FIRESTORE_DB, 'votes', voteDoc.id));
+              }
+
+              // Eliminar la foto
+              await deleteDoc(doc(FIRESTORE_DB, 'photos', photo.id));
+
+              // Actualizar contador de fotos del usuario
+              const userRef = doc(FIRESTORE_DB, 'users', photo.user_id);
+              await updateDoc(userRef, {
+                photos_submitted: increment(-1)
+              });
+
+              Alert.alert('Foto rechazada', 'La foto ha sido eliminada');
+              navigation.goBack();
+            } catch (error) {
+              console.error('Error rejecting photo:', error);
+              Alert.alert('Error', 'No se pudo rechazar la foto');
+            } finally {
+              setActionLoading(false);
+            }
+          }
+        }
+      ]
+    );
   };
 
   if (loading) {
@@ -159,6 +201,7 @@ export default function PhotoDetailScreen({ navigation, route }) {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#6C7CE7" />
+          <Text style={styles.loadingText}>Cargando...</Text>
         </View>
       </SafeAreaView>
     );
@@ -166,6 +209,7 @@ export default function PhotoDetailScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container}>
+    <StatusBar/>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -176,57 +220,51 @@ export default function PhotoDetailScreen({ navigation, route }) {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Imagen principal */}
-        <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: CloudinaryService.getOptimizedUrl(photo.image_url, screenWidth - 40, screenWidth - 40) }}
-            style={styles.mainImage}
-            resizeMode="cover"
-          />
+        {/* Imagen */}
+        <Image
+          source={{ uri: photo.image_url }}
+          style={styles.image}
+          resizeMode="contain"
+        />
+
+        {/* Info */}
+        <View style={styles.infoContainer}>
+          <Text style={styles.title}>{photo.title}</Text>
+          <Text style={styles.author}>Por {photo.user_name}</Text>
+
+          <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
+              <Ionicons name="heart" size={20} color="#6C7CE7" />
+              <Text style={styles.statText}>{photo.vote_count} votos</Text>
+            </View>
+
+            {userRole === 'administrator' && (
+              <View style={styles.statusContainer}>
+                <View style={[
+                  styles.statusBadge,
+                  { backgroundColor: photo.status === 'aprobado' ? '#4CAF50' : '#FF9800' }
+                ]}>
+                  <Text style={styles.statusText}>
+                    {photo.status === 'aprobado' ? 'Aprobada' : 'Pendiente'}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
         </View>
 
-        {/* Información de la foto */}
-        <View style={styles.infoSection}>
-          <Text style={styles.photoTitle}>{photo.title}</Text>
-
-          <View style={styles.authorInfo}>
-            <View style={styles.authorAvatar}>
-              <Text style={styles.authorInitial}>
-                {photo.user_name ? photo.user_name.charAt(0).toUpperCase() : '?'}
-              </Text>
-            </View>
-            <View style={styles.authorDetails}>
-              <Text style={styles.authorName}>{photo.user_name || 'Usuario'}</Text>
-              <Text style={styles.publishDate}>
-                {photo.created_at?.toDate?.()?.toLocaleDateString() || 'Fecha no disponible'}
-              </Text>
-            </View>
-          </View>
-
-          {/* Estadísticas */}
-          <View style={styles.statsSection}>
-            <View style={styles.statItem}>
-              <Ionicons name="heart" size={20} color="#E63946" />
-              <Text style={styles.statText}>{voteCount} votos</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Ionicons name="eye" size={20} color="#6C7CE7" />
-              <Text style={styles.statText}>Ver detalles</Text>
-            </View>
-          </View>
-
-          {/* Botón de voto */}
-          {canVote() && (
+        {/* Botones de acción */}
+        <View style={styles.actionsContainer}>
+          {userRole === 'participant' && photo.status === 'aprobado' && userUID !== photo.user_id && (
             <TouchableOpacity
               style={[
                 styles.voteButton,
-                hasVoted && styles.voteButtonActive,
-                voting && styles.voteButtonDisabled
+                (hasVoted || userVotesGiven >= maxVotes) && styles.buttonDisabled
               ]}
               onPress={handleVote}
-              disabled={voting}
+              disabled={actionLoading || hasVoted || userVotesGiven >= maxVotes}
             >
-              {voting ? (
+              {actionLoading ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
                 <>
@@ -235,31 +273,41 @@ export default function PhotoDetailScreen({ navigation, route }) {
                     size={20}
                     color="#fff"
                   />
-                  <Text style={styles.voteButtonText}>
-                    {hasVoted ? 'Quitar voto' : 'Votar foto'}
+                  <Text style={styles.buttonText}>
+                    {hasVoted ? 'Ya votaste' : `Votar (${userVotesGiven}/${maxVotes})`}
                   </Text>
                 </>
               )}
             </TouchableOpacity>
           )}
 
-          {/* Información adicional */}
-          <View style={styles.additionalInfo}>
-            <View style={styles.infoItem}>
-              <Ionicons name="information-circle-outline" size={20} color="#6C7CE7" />
-              <Text style={styles.infoText}>
-                {photo.user_id === auth.currentUser?.uid
-                  ? 'Esta es tu foto'
-                  : 'Foto de otro participante'
-                }
-              </Text>
-            </View>
+          {userRole === 'administrator' && photo.status === 'pendiente' && (
+            <View style={styles.adminButtons}>
+              <TouchableOpacity
+                style={[styles.approveButton, actionLoading && styles.buttonDisabled]}
+                onPress={handleApprove}
+                disabled={actionLoading}
+              >
+                {actionLoading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark" size={20} color="#fff" />
+                    <Text style={styles.buttonText}>Aprobar</Text>
+                  </>
+                )}
+              </TouchableOpacity>
 
-            <View style={styles.infoItem}>
-              <Ionicons name="shield-checkmark-outline" size={20} color="#4CAF50" />
-              <Text style={styles.infoText}>Estado: {photo.image_status}</Text>
+              <TouchableOpacity
+                style={[styles.rejectButton, actionLoading && styles.buttonDisabled]}
+                onPress={handleReject}
+                disabled={actionLoading}
+              >
+                <Ionicons name="close" size={20} color="#fff" />
+                <Text style={styles.buttonText}>Rechazar</Text>
+              </TouchableOpacity>
             </View>
-          </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -276,6 +324,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 20,
+    paddingTop: 65,
     backgroundColor: '#1a1a1a',
   },
   headerTitle: {
@@ -286,76 +335,58 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  imageContainer: {
-    padding: 20,
-    alignItems: 'center',
+  image: {
+    width: '100%',
+    height: 400,
+    backgroundColor: '#1a1a1a',
   },
-  mainImage: {
-    width: screenWidth - 40,
-    height: screenWidth - 40,
-    borderRadius: 15,
-  },
-  infoSection: {
+  infoContainer: {
     padding: 20,
     backgroundColor: '#1a1a1a',
     margin: 20,
     borderRadius: 15,
   },
-  photoTitle: {
-    fontSize: 24,
+  title: {
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#fff',
+    marginBottom: 8,
+  },
+  author: {
+    fontSize: 16,
+    color: '#A0A0A0',
     marginBottom: 15,
   },
-  authorInfo: {
+  statsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
-  },
-  authorAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#6C7CE7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  authorInitial: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  authorDetails: {
-    flex: 1,
-  },
-  authorName: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  publishDate: {
-    color: '#A0A0A0',
-    fontSize: 14,
-    marginTop: 2,
-  },
-  statsSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 15,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#333',
-    marginVertical: 20,
+    justifyContent: 'space-between',
   },
   statItem: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   statText: {
+    fontSize: 16,
     color: '#fff',
-    fontSize: 14,
     marginLeft: 8,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  actionsContainer: {
+    padding: 20,
+    paddingTop: 0,
   },
   voteButton: {
     flexDirection: 'row',
@@ -364,36 +395,45 @@ const styles = StyleSheet.create({
     backgroundColor: '#6C7CE7',
     padding: 15,
     borderRadius: 12,
-    marginBottom: 20,
   },
-  voteButtonActive: {
-    backgroundColor: '#E63946',
+  adminButtons: {
+    flexDirection: 'row',
+    gap: 10,
   },
-  voteButtonDisabled: {
-    backgroundColor: '#4a4a5a',
+  approveButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4CAF50',
+    padding: 15,
+    borderRadius: 12,
   },
-  voteButtonText: {
+  rejectButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F44336',
+    padding: 15,
+    borderRadius: 12,
+  },
+  buttonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
   },
-  additionalInfo: {
-    marginTop: 10,
-  },
-  infoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  infoText: {
-    color: '#A0A0A0',
-    fontSize: 14,
-    marginLeft: 12,
+  buttonDisabled: {
+    opacity: 0.5,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingText: {
+    color: '#fff',
+    marginTop: 10,
   },
 });
