@@ -79,6 +79,7 @@ export default function Menu({ routes }) {
       { screen: 'RankingScreen', label: 'Ranking', public: true },
       { screen: 'EditProfileScreen', label: 'Editar perfil' },
       { screen: 'UserDashboardScreen', label: 'Panel de usuario', adminOnly: true },
+      { screen: 'EditRallyInfoScreen', label: 'Reglas del concurso', adminOnly: true },
     ];
 
     // Filtrado según sesión y rol
@@ -93,10 +94,10 @@ export default function Menu({ routes }) {
 
       // Si es ruta solo para admin, verificar el rol
       if (ruta.adminOnly) {
-        return userData?.role === 'administrator';
+        return userData?.role === 'administrator' && routes.includes(ruta.screen);
       }
 
-      // Si es ruta solo para admin, verificar el rol
+      // Si es ruta solo para participant, verificar el rol
       if (ruta.participantOnly) {
         return userData?.role === 'participant';
       }
@@ -176,7 +177,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    paddingTop: 50,
+    paddingTop: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#333',
   },
@@ -221,7 +222,7 @@ const styles = StyleSheet.create({
   },
   menuHeader: {
     backgroundColor: '#1a1a1a',
-    paddingTop: 50,
+    paddingTop: 10,
     paddingHorizontal: 20,
     paddingBottom: 20,
     borderBottomWidth: 1,
@@ -231,7 +232,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 15,
-    marginTop:15,
   },
   avatarPlaceholder: {
     width: 50,
@@ -250,6 +250,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#fff',
     marginBottom: 2,
+    marginTop:20,
   },
   userRole: {
     fontSize: 12,
@@ -257,7 +258,7 @@ const styles = StyleSheet.create({
   },
   closeMenuButton: {
     position: 'absolute',
-    top: 55,
+    top: 25,
     right: 20,
     padding: 5,
   },

@@ -10,6 +10,7 @@ import RankingScreen from './screens/RankingScreen';
 import EditProfileScreen from './screens/EditProfileScreen';
 import UserDashboardScreen from './screens/UserDashboardScreen';
 import PhotoDetailScreen from './screens/PhotoDetailScreen';
+import EditRallyInfoScreen from './screens/EditRallyInfoScreen';
 
 const Stack = createStackNavigator();
 
@@ -26,6 +27,7 @@ export default function App() {
         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
         <Stack.Screen name="UserDashboard" component={UserDashboardScreen} />
         <Stack.Screen name="PhotoDetail" component={PhotoDetailScreen} />
+        <Stack.Screen name="EditRallyInfo" component={EditRallyInfoScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

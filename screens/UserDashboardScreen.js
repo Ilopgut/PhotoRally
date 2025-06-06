@@ -67,7 +67,7 @@ export default function UserDashboardScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1a1a1a" />
+      <StatusBar/>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 16,
-    paddingTop:60,
+    paddingTop:20,
     backgroundColor: '#1a1a1a',
     flexDirection: 'row',
     alignItems: 'center',

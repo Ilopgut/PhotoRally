@@ -22,8 +22,6 @@ export default function ProfileScreen() {
   const [userData, setUserData] = useState(null);
 
   const getStatusColor = (isActive) => isActive ? '#4CAF50' : '#F44336';
-  const getStatusText = (isActive) => isActive ? 'Activo' : 'Inactivo';
-  const getRoleColor = (role) => role === 'administrator' ? '#FF5722' : '#2196F3';
   const getRoleText = (role) => role === 'administrator' ? 'Administrador' : 'Participante';
 
   useEffect(() => {
@@ -84,7 +82,7 @@ export default function ProfileScreen() {
   if (!userData) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#1a1a1a" />
+        <StatusBar/>
         <View style={styles.loadingContainer}>
           <Text style={{ color: '#fff' }}>Cargando perfil...</Text>
         </View>
@@ -115,8 +113,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1a1a1a" />
-
+      <StatusBar/>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('Home')}>
@@ -143,10 +140,6 @@ export default function ProfileScreen() {
 
           <Text style={styles.userName}>{userData.name}</Text>
           <Text style={styles.userEmail}>{userData.email}</Text>
-
-          <View style={[styles.roleBadge, { backgroundColor: getRoleColor(userData.role) }]}>
-            <Text style={styles.roleText}>{getRoleText(userData.role)}</Text>
-          </View>
         </View>
 
         {/* Estadísticas */}
@@ -210,7 +203,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 20,
-    paddingTop: 50,
+    paddingTop: 20,
     backgroundColor: '#1a1a1a',
   },
   backButton: {

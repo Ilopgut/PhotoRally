@@ -34,13 +34,40 @@ export default function GalleryScreen({ navigation }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [photoTitle, setPhotoTitle] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [uploadImageErrorMessage, setUploadImageErrorMessage] = useState(null);
+  const [limitOfPhotos, setLimitOfPhotos] = useState(10);
+  const [photosCount, setPhotosCount] = useState(0);
 
   const routes = ['LoginScreen', 'SignUpScreen', 'HomeScreen', 'ProfileScreen', 'RankingScreen'];
 
   useEffect(() => {
     fetchUserRole();
     fetchPhotos();
+    fetchLimitOfPhotosInfo();
   }, []);
+
+  const fetchLimitOfPhotosInfo = async () => {
+    try{
+
+        //obtenemos el numero de fotos que ha subido el usuario
+        const user = auth.currentUser;
+        if (user) {
+            const userDocRef = doc(FIRESTORE_DB, 'users', user.uid);
+            const userDoc = await getDoc(userDocRef);
+          if (userDoc.exists()) {
+            setPhotosCount(userDoc.data().photos_submitted);
+          }
+        }
+        //obtenemos el numero de fotos que permite el concurso por usuario
+
+        const rallyDocRef = doc(FIRESTORE_DB, 'rally_config', 'rallyEjemplo');
+        const rallyDoc = await getDoc(rallyDocRef);
+        setLimitOfPhotos(rallyDoc.data().max_photos_per_user);
+    }catch(error){
+        setUploadImageErrorMessage("Parece que ha habido un problema: "+error);
+
+    }
+  };
 
   const fetchUserRole = async () => {
     const user = auth.currentUser;
@@ -61,8 +88,13 @@ export default function GalleryScreen({ navigation }) {
         id: doc.id,
         ...doc.data()
       }));
-      // Mostrar solo fotos aprobadas
-      setPhotos(photosData);
+
+      // Mostrar solo fotos aprobadas a todos los usuarios menos a los administradores
+      if(userRole==='administrator'){
+        setPhotos(photosData);
+      }else{
+        setPhotos(photosData.filter(photo => photo.status === 'aprobado'));
+      }
     } catch (error) {
       console.error('Error fetching photos:', error);
     } finally {
@@ -92,51 +124,57 @@ export default function GalleryScreen({ navigation }) {
 
   const handleUpload = async () => {
     if (!selectedImage || !photoTitle.trim()) {
-      Alert.alert('Error', 'Selecciona una imagen y añade un título');
+      setUploadImageErrorMessage('Selecciona una imagen y añade un título');
       return;
     }
+    //solo si el usuario ha subido menos fotos de las que permite el concurso
+    if(photosCount<limitOfPhotos){
+        setUploading(true);
+        try {
+          const user = auth.currentUser;
+          const userDoc = await getDoc(doc(FIRESTORE_DB, 'users', user.uid));
+          const userName = userDoc.data().name || 'Usuario';
 
-    setUploading(true);
-    try {
-      const user = auth.currentUser;
-      const userDoc = await getDoc(doc(FIRESTORE_DB, 'users', user.uid));
-      const userName = userDoc.data().name || 'Usuario';
+          // Subir imagen a Cloudinary
+          const uploadResult = await CloudinaryService.uploadImage(selectedImage, user.uid);
 
-      // Subir imagen a Cloudinary
-      const uploadResult = await CloudinaryService.uploadImage(selectedImage, user.uid);
+          if (!uploadResult.success) {
+            throw new Error(uploadResult.error);
+          }
 
-      if (!uploadResult.success) {
-        throw new Error(uploadResult.error);
-      }
+          // Guardar en Firestore
+          await addDoc(collection(FIRESTORE_DB, 'photos'), {
+            photo_id: `photo_${Date.now()}`,
+            title: photoTitle.trim(),
+            image_url: uploadResult.url,
+            status: 'pendiente',
+            user_id: user.uid,
+            user_name: userName,
+            vote_count: 0,
+            created_at: new Date(),
+          });
 
-      // Guardar en Firestore
-      await addDoc(collection(FIRESTORE_DB, 'photos'), {
-        photo_id: `photo_${Date.now()}`,
-        title: photoTitle.trim(),
-        image_url: uploadResult.url,
-        status: 'pendiente',
-        user_id: user.uid,
-        user_name: userName,
-        vote_count: 0,
-        created_at: new Date(),
-      });
+          // Actualizar contador de fotos del usuario
+          await updateDoc(doc(FIRESTORE_DB, 'users', user.uid), {
+            photos_submitted: increment(1)
+          });
 
-      // Actualizar contador de fotos del usuario
-      await updateDoc(doc(FIRESTORE_DB, 'users', user.uid), {
-        photos_submitted: increment(1)
-      });
+          Alert.alert('Éxito', 'Foto subida correctamente');
+          setUploadImageErrorMessage(null);
+          setUploadModalVisible(false);
+          setSelectedImage(null);
+          setPhotoTitle('');
+          fetchPhotos();
 
-      Alert.alert('Éxito', 'Foto subida correctamente');
-      setUploadModalVisible(false);
-      setSelectedImage(null);
-      setPhotoTitle('');
-      fetchPhotos();
-
-    } catch (error) {
-      console.error('Error uploading photo:', error);
-      Alert.alert('Error', 'Error al subir la foto');
-    } finally {
-      setUploading(false);
+        } catch (error) {
+          console.error('Error uploading photo:', error);
+          Alert.alert('Error', 'Error al subir la foto');
+        } finally {
+          setUploading(false);
+        }
+    }else{
+        setUploadImageErrorMessage('Has alcanzado el limite de fotos para este concurso');
+        return;
     }
   };
 
@@ -222,7 +260,7 @@ const renderPhoto = ({ item }) => {
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.cancelButton}
-                onPress={() => setUploadModalVisible(false)}
+                onPress={() => {setUploadModalVisible(false); setUploadImageErrorMessage(null)}}
               >
                 <Text style={styles.cancelButtonText}>Cancelar</Text>
               </TouchableOpacity>
@@ -239,6 +277,9 @@ const renderPhoto = ({ item }) => {
                 )}
               </TouchableOpacity>
             </View>
+            {uploadImageErrorMessage && (
+                <Text style={styles.uploadImageErrorMessage}>{uploadImageErrorMessage}</Text>
+            )}
           </View>
         </View>
       </Modal>
@@ -395,4 +436,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  uploadImageErrorMessage: {
+    color: 'red',
+    paddingTop:15,
+    lineHeight:30
+  }
 });

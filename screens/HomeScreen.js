@@ -1,6 +1,5 @@
-import { StatusBar } from 'expo-status-bar';
 import { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, SafeAreaView } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, SafeAreaView, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Menu from '../components/Menu';
 import { doc, getDoc, getDocs, collection } from 'firebase/firestore';
@@ -15,6 +14,7 @@ export default function HomeScreen({ navigation }) {
     'UploadPhotoScreen',
     'RankingScreen',
     'UserDashboardScreen',
+    'EditRallyInfoScreen',
   ];
 
   const [rallyInfo, setRallyInfo] = useState(null);
@@ -25,20 +25,21 @@ export default function HomeScreen({ navigation }) {
       try {
         const rallyDocRef = doc(FIRESTORE_DB, 'rally_config', 'rallyEjemplo');
         const rallyDoc = await getDoc(rallyDocRef);
+        const data = rallyDoc.data();
 
         setRallyInfo({
-          created_at: rallyDoc.data().created_at,
-          description: rallyDoc.data().description,
-          is_active: rallyDoc.data().is_active,
-          max_photos_per_user: rallyDoc.data().max_photos_per_user,
-          max_votes_per_user: rallyDoc.data().max_votes_per_user,
-          registration_end: rallyDoc.data().registration_end,
-          registration_start: rallyDoc.data().registration_start,
-          submission_end: rallyDoc.data().submission_end,
-          submission_start: rallyDoc.data().submission_start,
-          title: rallyDoc.data().title,
-          voting_end: rallyDoc.data().voting_end,
-          voting_start: rallyDoc.data().voting_start,
+          created_at: data.created_at?.toDate() || new Date(), // Convierte Timestamp a Date
+          description: data.description,
+          is_active: data.is_active,
+          max_photos_per_user: data.max_photos_per_user,
+          max_votes_per_user: data.max_votes_per_user,
+          registration_end: data.registration_end?.toDate() || new Date(),
+          registration_start: data.registration_start?.toDate() || new Date(),
+          submission_end: data.submission_end?.toDate() || new Date(),
+          submission_start: data.submission_start?.toDate() || new Date(),
+          title: data.title,
+          voting_end: data.voting_end?.toDate() || new Date(),
+          voting_start: data.voting_start?.toDate() || new Date(),
         });
       } catch (error) {
         console.error('Error al obtener la informacion:', error);
@@ -50,7 +51,7 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar/>
       <Menu routes={routes} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>

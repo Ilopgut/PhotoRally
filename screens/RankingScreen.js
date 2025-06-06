@@ -21,7 +21,6 @@ export default function RankingScreen({ navigation }) {
     'SignUpScreen',
     'GalleryScreen',
     'ProfileScreen',
-    'UploadPhotoScreen',
     'HomeScreen',
   ];
 
@@ -70,7 +69,7 @@ export default function RankingScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1a1a1a" />
+      <StatusBar/>
       <Menu routes={routes} />
 
       {loading ? (

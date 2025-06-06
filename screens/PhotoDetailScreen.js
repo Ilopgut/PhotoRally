@@ -200,7 +200,6 @@ export default function PhotoDetailScreen({ navigation, route }) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6C7CE7" />
           <Text style={styles.loadingText}>Cargando...</Text>
         </View>
       </SafeAreaView>
@@ -324,7 +323,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 20,
-    paddingTop: 65,
+    paddingTop: 20,
     backgroundColor: '#1a1a1a',
   },
   headerTitle: {
@@ -343,8 +342,7 @@ const styles = StyleSheet.create({
   infoContainer: {
     padding: 20,
     backgroundColor: '#1a1a1a',
-    margin: 20,
-    borderRadius: 15,
+    margin: 5,
   },
   title: {
     fontSize: 20,
